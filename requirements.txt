@@ -1,0 +1,23 @@
+# RSS Feed Parsing
+To-do
+
+# Web Scraping
+To-do
+
+# Data Processing
+To-do
+
+# Local LLM Integration
+To-do
+
+# Backend
+fastapi
+
+# Frontend
+To-do
+
+# Database
+To-do
+
+# Extra Utilities
+To-do
