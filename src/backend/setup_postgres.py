@@ -6,6 +6,7 @@ DB_USER = "testuser" # Change to a username of choice
 DB_PASSWORD = "testpwd" # Change to a password of choice
 DB_HOST = "localhost"
 DB_PORT = "5432" # Default PostgreSQL port
+SUPERUSER = "peter" # Change to a superuser of choice
 
 def setup():
     """
@@ -16,7 +17,7 @@ def setup():
         # First connect as superuser ('postgres')
         conn = psycopg.connect(
             dbname = "postgres",  # Default database
-            user = "peter",
+            user = f"{SUPERUSER}",
             host = DB_HOST,
             port = DB_PORT
         )
