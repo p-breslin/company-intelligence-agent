@@ -1,7 +1,3 @@
 .DS_Store
-.DS_Store
-src/company_intelligence_agent.egg-info/dependency_links.txt
-src/company_intelligence_agent.egg-info/PKG-INFO
-src/company_intelligence_agent.egg-info/SOURCES.txt
-src/company_intelligence_agent.egg-info/top_level.txt
-.DS_Store
+src/company_intelligence_agent.egg-info/
+src/utils/__pycache__/
