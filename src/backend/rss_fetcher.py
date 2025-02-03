@@ -1,4 +1,5 @@
 import psycopg
+import hashlib
 import feedparser
 from dateutil import parser
 from utils.config import config
@@ -9,6 +10,10 @@ class RSSFeedFetcher:
         self.db = config.get_section("database")
         self.feeds = feeds
 
+    def compute_hash(self, content):
+        """Converts url into MD5 hash."""
+        return hashlib.md5(content.encode('utf-8')).hexdigest()
+
     def fetch(self):
         """Fetch and parse RSS feed data."""
         articles = []
@@ -18,17 +23,18 @@ class RSSFeedFetcher:
                 # Check if feed has desired fields
                 title = entry.title if hasattr(entry, 'title') else None
                 link = entry.link if hasattr(entry, 'link') else None
-                published = entry.published if hasattr(entry, 'published') else None
-
+                hash = self.compute_hash(title + link)
+                
                 # Parse and convert RSS date string into Python datetime object
+                published = entry.published if hasattr(entry, 'published') else None
                 if published:
                     try:
                         published = parser.parse(published)
                     except Exception as e:
                         print(f"Error parsing date '{published}': {e}")
                         published = None
-        
-                articles.append((title, link, published))
+                
+                articles.append((title, link, hash, published))
 
         print("RSS feed data fetched successfully.")
         self.store(articles)
@@ -45,20 +51,25 @@ class RSSFeedFetcher:
             )
             
             with conn.cursor() as cur:
+                conflict_count = 0
                 for article in articles:
-                    title, link, published = article
+                    title, link, hash, published = article
                     try:
-                        # ON CONFLICT (link) DO NOTHING prevents duplicate entries
+                        # Prevent duplicate entries using the hash
                         cur.execute(
                             """
-                            INSERT INTO articles (title, link, published)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (link) DO NOTHING;
+                            INSERT INTO articles (title, link, hash, published)
+                            VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (hash) DO NOTHING;
                             """,
-                            (title, link, published)
+                            (title, link, hash, published)
                         )
+                        # Detect if a conflict occurred
+                        if cur.rowcount == 0:
+                            conflict_count += 1
                     except Exception as e:
                         print(f"Error inserting article: {e}")
+                print(f"Hash conflicts detected: {conflict_count}")
             
             conn.commit()
             conn.close()
@@ -71,6 +82,7 @@ class RSSFeedFetcher:
 if __name__ == "__main__":
 
     feeds = [
+    "https://www.nasa.gov/rss/dyn/breaking_news.rss",
     "https://www.nasa.gov/rss/dyn/breaking_news.rss"
     ]
 
