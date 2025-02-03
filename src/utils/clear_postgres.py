@@ -1,20 +1,19 @@
 import psycopg
+from utils.config import config
+from psycopg import OperationalError
 
 """Simple script to delete a PostgreSQL database and user."""
 
-DB_NAME = "cia" # Company Intelligence Agent
-DB_USER = "testuser" # Change to a username of choice
-DB_HOST = "localhost"
-DB_PORT = "5432" # Default PostgreSQL port
-SUPERUSER = "peter" # Change to a superuser of choice
-
 try:
+    # Import the database configuration details
+    db = config.get_section("database")
+
     # First connect as superuser ('postgres')
     conn = psycopg.connect(
         dbname = "postgres",  # Default database
-        user = f"{SUPERUSER}",
-        host = DB_HOST,
-        port = DB_PORT
+        user = db['superuser'],
+        host = db['host'],
+        port = db['port']
     )
     conn.autocommit = True 
     cur = conn.cursor()
@@ -25,19 +24,21 @@ try:
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
         WHERE pg_stat_activity.datname = %s;
-    """, (DB_NAME,))
+    """, (db['name'],))
     
     # Drop the database
-    cur.execute(f"DROP DATABASE IF EXISTS {DB_NAME};")
-    print(f"Database '{DB_NAME}' dropped successfully.")
+    cur.execute(f"DROP DATABASE IF EXISTS {db['name']};")
+    print(f"Database '{db['name']}' dropped successfully.")
 
     # Drop the user
-    cur.execute(f"DROP USER IF EXISTS {DB_USER};")
-    print(f"User '{DB_USER}' dropped successfully.")
+    cur.execute(f"DROP USER IF EXISTS {db['user']};")
+    print(f"User '{db['user']}' dropped successfully.")
 
     conn.commit()
     cur.close()
     conn.close()
 
+except OperationalError as e:
+    print(f"OperationalError: {e}")
 except Exception as e:
     print("Error during deletion process:", e)
