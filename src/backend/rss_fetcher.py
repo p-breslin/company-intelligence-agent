@@ -23,6 +23,8 @@ class RSSFeedFetcher:
                 # Check if feed has desired fields
                 title = entry.title if hasattr(entry, 'title') else None
                 link = entry.link if hasattr(entry, 'link') else None
+                source = feed.feed.link if hasattr(feed.feed, 'link') else None
+                summary = entry.summary if hasattr(entry, 'summary') else None
                 hash = self.compute_hash(title + link)
                 
                 # Parse and convert RSS date string into Python datetime object
@@ -34,7 +36,7 @@ class RSSFeedFetcher:
                         print(f"Error parsing date '{published}': {e}")
                         published = None
                 
-                articles.append((title, link, hash, published))
+                articles.append((title, link, source, summary, hash, published))
 
         print("RSS feed data fetched successfully.")
         self.store(articles)
@@ -53,16 +55,16 @@ class RSSFeedFetcher:
             with conn.cursor() as cur:
                 conflict_count = 0
                 for article in articles:
-                    title, link, hash, published = article
+                    title, link, source, summary, hash, published = article
                     try:
                         # Prevent duplicate entries using the hash
                         cur.execute(
                             """
-                            INSERT INTO articles (title, link, hash, published)
-                            VALUES (%s, %s, %s, %s)
+                            INSERT INTO articles (title, link, source, summary, hash, published)
+                            VALUES (%s, %s, %s, %s, %s, %s)
                             ON CONFLICT (hash) DO NOTHING;
                             """,
-                            (title, link, hash, published)
+                            (title, link, source, summary, hash, published)
                         )
                         # Detect if a conflict occurred
                         if cur.rowcount == 0:
