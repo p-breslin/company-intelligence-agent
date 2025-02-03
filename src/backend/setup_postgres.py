@@ -96,8 +96,6 @@ class PostgreSQLsetup:
                         id SERIAL PRIMARY KEY,
                         title TEXT NOT NULL,
                         link TEXT UNIQUE NOT NULL,
-                        hash TEXT UNIQUE NOT NULL,
-                        summary TEXT,
                         published TIMESTAMP
                     );
                 """)
