@@ -3,6 +3,7 @@ import hashlib
 import feedparser
 from dateutil import parser
 from utils.config import config
+from urllib.parse import urlparse
 from utils.helpers import compute_hash
 
 class RSSFeedFetcher:
@@ -21,8 +22,9 @@ class RSSFeedFetcher:
                 title = entry.title if hasattr(entry, 'title') else None
                 link = entry.link if hasattr(entry, 'link') else None
                 source = feed.feed.link if hasattr(feed.feed, 'link') else None
+                source = urlparse(source).netloc # Removing https:// for consistency
                 summary = entry.summary if hasattr(entry, 'summary') else None
-                hash = compute_hash(title + link)
+                hash = compute_hash(title, link)
                 
                 # Parse and convert RSS date string into Python datetime object
                 published = entry.published if hasattr(entry, 'published') else None

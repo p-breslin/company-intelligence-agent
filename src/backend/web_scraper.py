@@ -47,7 +47,7 @@ class WebScraper:
                         published = None
 
             # Compute hash for deduplication
-            content_hash = compute_hash(title + content)
+            hash = compute_hash(title, url)
 
             articles.append({
                  "title": title,
@@ -55,7 +55,7 @@ class WebScraper:
                  "content": content,
                  "published": published,
                  "source": urlparse(url).netloc, # Extract domain as source
-                 "hash": content_hash
+                 "hash": hash
                  })
             
             time.sleep(2) # Rate limiting to avoid getting blocked
