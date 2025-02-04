@@ -1,3 +1,4 @@
 .DS_Store
 src/company_intelligence_agent.egg-info/
 src/utils/__pycache__/
+/rough_work
