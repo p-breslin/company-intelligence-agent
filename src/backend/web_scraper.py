@@ -1,23 +1,56 @@
 import time
 import psycopg
-import hashlib
 import requests
 from dateutil import parser
 from bs4 import BeautifulSoup
 from utils.config import config
-from urllib.parse import urlparse
 from utils.helpers import compute_hash
+from urllib.parse import urlparse, urljoin
+from urllib.robotparser import RobotFileParser
+
 
 class WebScraper:
     def __init__(self, targets):
         self.targets = targets
         self.db = config.get_section("database")
 
+
+    def respect_robots(self, source):
+        """
+        Determines if scraping is allowed and what the crawl delay is.
+        If no delay, still rate limit to avoid getting blocked.
+        """
+        
+        robots_url = urljoin("https://" + source, "/robots.txt")
+        rp = RobotFileParser()
+        
+        try:
+            rp.set_url(robots_url)
+            rp.read()
+            allowed = rp.can_fetch("*", "https://" + source)  # Check permission
+            delay = rp.crawl_delay("*") or 2  # Default delay if not specified
+            return allowed, delay
+        except Exception as e:
+            print(f"Error fetching robots.txt from {source}: {e}")
+            return True, 2  # Assume scraping is allowed with default delay
+
+
     def scrape(self):
         """Scrapes web pages."""
         articles = []
         headers = {"User-Agent": "Mozilla/5.0"} # spoofs browser to avoid bot detection
+
         for url in self.targets:
+            source = urlparse(url).netloc
+
+            # Get permission and crawl delay in one call
+            permission, delay = self.respect_robots(source)
+            if not permission:
+                print(f"Skipping {url} as per robots.txt")
+                continue
+
+            time.sleep(delay)  # Respect the delay before scraping
+
             try:
                 # Retrieve HTML content of the page
                 response = requests.get(url, headers=headers, timeout=10)
@@ -54,12 +87,12 @@ class WebScraper:
                  "url": url,
                  "content": content,
                  "published": published,
-                 "source": urlparse(url).netloc, # Extract domain as source
+                 "source": source, # Extract domain as source
                  "hash": hash
                  })
             
-            time.sleep(2) # Rate limiting to avoid getting blocked
         self.store_scraped_data(articles)
+
 
     def store_scraped_data(self, articles):
         conn = psycopg.connect(
@@ -92,6 +125,7 @@ if __name__ == "__main__":
 
     targets = [
         "https://www.nasa.gov/news",
+        "https://www.investors.com/",
         "https://www.nasa.gov/news",
     ]
 
