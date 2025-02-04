@@ -36,7 +36,14 @@ class RSSFeedFetcher:
                         print(f"Error parsing date '{published}': {e}")
                         published = None
                 
-                articles.append((title, link, source, summary, hash, published))
+                articles.append({
+                    "title": title,
+                    "link": link,
+                    "source": source,
+                    "summary": summary,
+                    "hash": hash,
+                    "published": published
+                    })
 
         print("RSS feed data fetched successfully.")
         self.store(articles)
@@ -54,8 +61,7 @@ class RSSFeedFetcher:
             
             with conn.cursor() as cur:
                 conflict_count = 0
-                for article in articles:
-                    title, link, source, summary, hash, published = article
+                for a in articles:
                     try:
                         # Prevent duplicate entries using the hash
                         cur.execute(
@@ -64,7 +70,8 @@ class RSSFeedFetcher:
                             VALUES (%s, %s, %s, %s, %s, %s)
                             ON CONFLICT (hash) DO NOTHING;
                             """,
-                            (title, link, source, summary, hash, published)
+                            (a["title"], a["link"], a["source"], a["summary"], a["hash"], a["published"])
+
                         )
                         # Detect if a conflict occurred
                         if cur.rowcount == 0:
