@@ -1,16 +1,39 @@
+import re
+import html
 import psycopg
-import hashlib
 import feedparser
 from dateutil import parser
+from bs4 import BeautifulSoup
 from utils.config import config
 from urllib.parse import urlparse
 from utils.helpers import compute_hash
+
 
 class RSSFeedFetcher:
     def __init__(self, feeds):
         """Initialize with the database configuration details."""
         self.db = config.get_section("database")
         self.feeds = feeds
+
+
+    def clean_rss_content(self, raw_html):
+        """Extracts text from RSS HTML while removing unnecessary elements."""
+        
+        # Extract all paragraph content (p tags contain the actual text)
+        soup = BeautifulSoup(raw_html, "html.parser")
+        paragraphs = [p.get_text(separator=" ", strip=True) for p in soup.find_all("p")]
+        
+        # Join paragraphs into a single readable text block
+        text = "\n\n".join(paragraphs)  # Keeps paragraph breaks for readability
+
+        # Convert HTML entities (e.g., &nbsp; and &quot;)
+        text = html.unescape(text)
+
+        # Remove extra spaces, newlines, and multiple consecutive blank lines
+        text = re.sub(r"\s+", " ", text).strip()
+        text = re.sub(r"\n{2,}", "\n\n", text)  # Preserve paragraph separation
+        return text.strip()   
+     
 
     def fetch(self):
         """Fetch and parse RSS feed data."""
@@ -34,18 +57,27 @@ class RSSFeedFetcher:
                     except Exception as e:
                         print(f"Error parsing date '{published}': {e}")
                         published = None
+
+                # If there is full content, extract clean text from HTML
+                if hasattr(entry, 'content'):
+                    raw_html = entry.content[0].value
+                    content = self.clean_rss_content(raw_html)
+                else:
+                    content = None
                 
                 articles.append({
                     "title": title,
                     "link": link,
                     "source": source,
                     "summary": summary,
+                    "content": content,
                     "hash": hash,
                     "published": published
                     })
 
         print("RSS feed data fetched successfully.")
         self.store(articles)
+
 
     def store(self, articles):
         """Insert RSS articles into PostgreSQL database."""
@@ -62,11 +94,11 @@ class RSSFeedFetcher:
                     # Prevent duplicate entries using the hash
                     cur.executemany(
                         """
-                        INSERT INTO articles (title, link, source, summary, hash, published)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO articles (title, link, source, summary, content, hash, published)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (hash) DO NOTHING;
                         """,
-                        [(a["title"], a["link"], a["source"], a["summary"], a["hash"], a["published"]) for a in articles]
+                        [(a["title"], a["link"], a["source"], a["summary"], a["content"], a["hash"], a["published"]) for a in articles]
                         )
             
                 except Exception as e:
