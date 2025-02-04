@@ -4,6 +4,7 @@ import psycopg
 import feedparser
 from dateutil import parser
 from bs4 import BeautifulSoup
+from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse
 from utils.helpers import compute_hash
@@ -86,7 +87,10 @@ class RSSFeedFetcher:
 
 
     def store(self, articles):
-        """Insert RSS articles into PostgreSQL database."""
+        """
+        Inserts RSS articles into PostgreSQL database.
+        Prevents duplicate entries using the hash.
+        """
         try:
             conn = psycopg.connect(
                 dbname = self.db['name'],
@@ -97,15 +101,24 @@ class RSSFeedFetcher:
             )
             with conn.cursor() as cur:
                 try:
-                    # Prevent duplicate entries using the hash
-                    cur.executemany(
-                        """
-                        INSERT INTO articles (title, link, source, summary, content, hash, published)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    # Get column names dynamically from schema
+                    columns = list(self.schema.keys())
+                    # Create placeholders for values
+                    placeholders = ", ".join(["%s"] * len(columns))
+                    # Join column names for SQL query
+                    col_names = ", ".join(columns) 
+
+                    # Construct dynamic INSERT statement 
+                    insert_query = f"""
+                        INSERT INTO articles ({col_names})
+                        VALUES ({placeholders})
                         ON CONFLICT (hash) DO NOTHING;
-                        """,
-                        [(a["title"], a["link"], a["source"], a["summary"], a["content"], a["hash"], a["published"]) for a in articles]
-                        )
+                    """
+
+                    # Execute query dynamically
+                    getter = itemgetter(*columns) # optimized getter for column order
+                    values = [getter(a) for a in articles]
+                    cur.executemany(insert_query, values)                    
             
                 except Exception as e:
                     print(f"Error inserting article: {e}")
