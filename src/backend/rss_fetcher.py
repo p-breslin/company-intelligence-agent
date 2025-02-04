@@ -58,27 +58,20 @@ class RSSFeedFetcher:
                 host = self.db['host'],
                 port = self.db['port']
             )
-            
             with conn.cursor() as cur:
-                conflict_count = 0
-                for a in articles:
-                    try:
-                        # Prevent duplicate entries using the hash
-                        cur.execute(
-                            """
-                            INSERT INTO articles (title, link, source, summary, hash, published)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (hash) DO NOTHING;
-                            """,
-                            (a["title"], a["link"], a["source"], a["summary"], a["hash"], a["published"])
-
+                try:
+                    # Prevent duplicate entries using the hash
+                    cur.executemany(
+                        """
+                        INSERT INTO articles (title, link, source, summary, hash, published)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (hash) DO NOTHING;
+                        """,
+                        [(a["title"], a["link"], a["source"], a["summary"], a["hash"], a["published"]) for a in articles]
                         )
-                        # Detect if a conflict occurred
-                        if cur.rowcount == 0:
-                            conflict_count += 1
-                    except Exception as e:
-                        print(f"Error inserting article: {e}")
-                print(f"Hash conflicts detected: {conflict_count}")
+            
+                except Exception as e:
+                    print(f"Error inserting article: {e}")
             
             conn.commit()
             conn.close()
