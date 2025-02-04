@@ -1,0 +1,19 @@
+{
+    "database": {
+        "name": "cia",
+        "user": "testusr",
+        "password": "testpwd",
+        "host": "localhost",
+        "port": 5432,
+        "superuser": "peter"
+    },
+    "articles_schema": {
+        "title": "TEXT NOT NULL",
+        "link": "TEXT NOT NULL",
+        "source": "TEXT NOT NULL",
+        "published": "TIMESTAMP",
+        "hash": "TEXT UNIQUE NOT NULL",
+        "summary": "TEXT",
+        "content": "TEXT"
+    }
+}
