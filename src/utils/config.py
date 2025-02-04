@@ -7,7 +7,7 @@ class ConfigLoader:
     def __init__(self):
         self.config = configparser.ConfigParser()
 
-        # Determine config path (default or provided)
+        # Determine config path
         self.config_path = os.getenv("DB_CONFIG_PATH", "configs/config.ini")
 
         if not os.path.exists(self.config_path):
