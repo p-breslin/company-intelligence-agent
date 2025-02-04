@@ -6,6 +6,7 @@ class PostgreSQLsetup:
     def __init__(self):
         """Initialize with the database configuration details."""
         self.db = config.get_section("database")
+        self.schema = config.get_section("schema")
 
     def setup(self):
         """
@@ -89,20 +90,21 @@ class PostgreSQLsetup:
             """)
             table_exists = cur.fetchone()[0]
 
-            # Create the table if not exists
+            # Dynamically creates the table if not exists
             if not table_exists:
-                cur.execute("""
+                # Each column will appear on a new line indented for readability
+                columns = []
+                for col, value in self.schema.items():
+                    columns.append(f"{col} {value}")
+                columns = ",\n    ".join(columns)
+
+                create_table_query = f"""
                     CREATE TABLE articles (
                         id SERIAL PRIMARY KEY,
-                        title TEXT NOT NULL,
-                        link TEXT UNIQUE NOT NULL,
-                        source TEXT NOT NULL,
-                        summary TEXT,
-                        content TEXT,
-                        hash TEXT UNIQUE NOT NULL,
-                        published TIMESTAMP
+                        {columns}
                     );
-                """)
+                """
+                cur.execute(create_table_query)
                 conn.commit()
                 print("Table 'articles' created successfully.")
             else:

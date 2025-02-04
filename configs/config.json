@@ -2,12 +2,12 @@
     "database": {
         "name": "cia",
         "user": "testusr",
-        "password": "testpwd",
+        "pwd": "testpwd",
         "host": "localhost",
         "port": 5432,
         "superuser": "peter"
     },
-    "articles_schema": {
+    "schema": {
         "title": "TEXT NOT NULL",
         "link": "TEXT NOT NULL",
         "source": "TEXT NOT NULL",
