@@ -97,8 +97,9 @@ class PostgreSQLsetup:
                         title TEXT NOT NULL,
                         link TEXT UNIQUE NOT NULL,
                         source TEXT NOT NULL,
-                        hash TEXT UNIQUE NOT NULL,
                         summary TEXT,
+                        content TEXT,
+                        hash TEXT UNIQUE NOT NULL,
                         published TIMESTAMP
                     );
                 """)
