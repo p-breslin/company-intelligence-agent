@@ -6,14 +6,12 @@ from dateutil import parser
 from bs4 import BeautifulSoup
 from utils.config import config
 from urllib.parse import urlparse
+from utils.helpers import compute_hash
 
 class WebScraper:
     def __init__(self, targets):
         self.targets = targets
         self.db = config.get_section("database")
-
-    def compute_hash(self, content):
-        return hashlib.md5(content.encode('utf-8')).hexdigest()
 
     def scrape(self):
         """Scrapes web pages."""
@@ -49,7 +47,7 @@ class WebScraper:
                         published = None
 
             # Compute hash for deduplication
-            content_hash = self.compute_hash(title + content)
+            content_hash = compute_hash(title + content)
 
             articles.append({
                  "title": title,

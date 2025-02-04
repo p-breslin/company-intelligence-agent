@@ -3,16 +3,13 @@ import hashlib
 import feedparser
 from dateutil import parser
 from utils.config import config
+from utils.helpers import compute_hash
 
 class RSSFeedFetcher:
     def __init__(self, feeds):
         """Initialize with the database configuration details."""
         self.db = config.get_section("database")
         self.feeds = feeds
-
-    def compute_hash(self, content):
-        """Converts url into MD5 hash."""
-        return hashlib.md5(content.encode('utf-8')).hexdigest()
 
     def fetch(self):
         """Fetch and parse RSS feed data."""
@@ -25,7 +22,7 @@ class RSSFeedFetcher:
                 link = entry.link if hasattr(entry, 'link') else None
                 source = feed.feed.link if hasattr(feed.feed, 'link') else None
                 summary = entry.summary if hasattr(entry, 'summary') else None
-                hash = self.compute_hash(title + link)
+                hash = compute_hash(title + link)
                 
                 # Parse and convert RSS date string into Python datetime object
                 published = entry.published if hasattr(entry, 'published') else None
