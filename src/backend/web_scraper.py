@@ -79,14 +79,16 @@ class WebScraper:
                         "meta", {"property": "article:published_time"}
                         )
                     if date_meta and "content" in date_meta.attrs:
-                        published = date_meta["content"]
+                        published = date_meta['content']
                         if published:
                             try:
                                 published = parser.parse(published)
+                                data[db_field] = published
                             except Exception as e:
                                 print(f"Error parsing date '{published}': {e}")
                                 published = None 
-                    data[db_field] = published
+                    else:
+                        continue
 
                 if db_field == "title":
                     val = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
@@ -94,8 +96,15 @@ class WebScraper:
 
                 if db_field == "content":
                     raw = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
-                    val = clean_raw_html(raw, feed='web') # Clean article text
-                    data[db_field] = val
+                    if raw:
+                        val = clean_raw_html(raw, feed='web') # Clean article text
+                    else:
+                        continue
+
+                if db_field == "tags":
+                    tags = soup.find("meta", {"name": "keywords"})
+                    if tags and "content" in tags.attrs:
+                        data[db_field] = tags['content']
 
             # Compute hash for deduplication
             hash = compute_hash(data['title'], data['source'])
