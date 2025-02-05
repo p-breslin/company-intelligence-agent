@@ -42,7 +42,7 @@
         "deepseek": "deepseek-r1:1.5b"
     },
     "prompts": {
-        "categories": "Consider these categories: Executive Team News, Product Updates, Customer Stories, Market Analysis. Read the article below and categorize it by choosinf ONE of the given categories. Your response should be the chosen category and nothing else.",
+        "categories": "Consider these categories: Executive Team News, Company Strategy, Product Updates, Customer Stories, Market Analysis. Read the article below and categorize it by choosing ONE of the given categories. Your response should be the chosen category and nothing else.",
         "details": "Return a JSON with 'company', 'executives', 'product', 'event'."
     }
 }
