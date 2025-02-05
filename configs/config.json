@@ -14,7 +14,8 @@
         "published": "TIMESTAMP",
         "hash": "TEXT UNIQUE NOT NULL",
         "summary": "TEXT",
-        "content": "TEXT"
+        "content": "TEXT",
+        "tags": "TEXT"
     },
     "field_mapping": {
         "title": "title",
@@ -23,13 +24,15 @@
         "published": "published",
         "hash": "hash",
         "summary": "None",
-        "content": "article"
+        "content": "article",
+        "tags": "tags"
     },
     "rss_feeds": [
         "https://www.nasa.gov/rss/dyn/breaking_news.rss",
         "https://www.nasa.gov/rss/dyn/breaking_news.rss"
     ],
     "test_sites": [
+        "https://www.nasa.gov/news-release/",
         "https://www.nasa.gov/news",
         "https://www.investors.com/",
         "https://www.nasa.gov/news"
