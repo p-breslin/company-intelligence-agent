@@ -32,3 +32,16 @@ def clean_raw_html(raw_html, feed="rss"):
         text = re.sub(r"\s+", " ", text).strip()
     
     return text   
+
+
+def token_count(text):
+    """
+    Estimates the token count based on word and character length.
+    Approx. number of tokens per word in English = 0.75.
+    Average number of characters per token = 4.
+    If text has many short words: (characters/4) gives better estimate.
+	If text has longer words: (words*0.75) is more accurate.
+    """
+    words = text.split()
+    chars = len(text)
+    return int(max(len(words)*0.75, chars/4))
