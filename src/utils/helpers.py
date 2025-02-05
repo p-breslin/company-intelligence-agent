@@ -11,20 +11,24 @@ def compute_hash(title, url):
     return hashlib.md5((title + base_domain).encode('utf-8')).hexdigest()
 
 
-def clean_raw_html(raw_html):
+def clean_raw_html(raw_html, feed="rss"):
     """Extracts text from raw HTML while removing unnecessary elements."""
-    
-    # Extract all paragraph content (p tags contain the actual text)
+
+    # Parse with BeautifulSoup to remove HTML tags
     soup = BeautifulSoup(raw_html, "html.parser")
-    paragraphs = [p.get_text(separator=" ", strip=True) for p in soup.find_all("p")]
     
-    # Join paragraphs into a single readable text block
-    text = "\n\n".join(paragraphs)  # Keeps paragraph breaks for readability
+    if feed=="rss":
+        # Extract text while preserving paragraph breaks
+        text = "\n\n".join(soup.stripped_strings)
 
-    # Convert HTML entities (e.g., &nbsp; and &quot;)
-    text = html.unescape(text)
+        # Normalize spacing and convert HTML entities
+        text = re.sub(r"\s+", " ", html.unescape(text)).strip()
 
-    # Remove extra spaces, newlines, and multiple consecutive blank lines
-    text = re.sub(r"\s+", " ", text).strip()
-    text = re.sub(r"\n{2,}", "\n\n", text)  # Preserve paragraph separation
-    return text.strip()   
+    if feed=="web":
+        # Use space instead of newlines for better readability
+        text = soup.get_text(separator=" ") 
+
+        # Remove excessive whitespace (noramlizes whitespace)
+        text = re.sub(r"\s+", " ", text).strip()
+    
+    return text   

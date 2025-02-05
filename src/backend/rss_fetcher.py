@@ -50,7 +50,7 @@ class RSSFeedFetcher:
                     # If there is full content, extract clean text from HTML
                         if hasattr(entry, 'content'):
                             raw = entry.content[0].value
-                            content = clean_raw_html(raw)
+                            content = clean_raw_html(raw, feed='rss')
                         else:
                             content = None
                         data['content'] = content

@@ -5,9 +5,9 @@ from dateutil import parser
 from bs4 import BeautifulSoup
 from operator import itemgetter
 from utils.config import config
-from utils.helpers import compute_hash
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
+from utils.helpers import compute_hash, clean_raw_html
 
 
 class WebScraper:
@@ -88,8 +88,13 @@ class WebScraper:
                                 published = None 
                     data[db_field] = published
 
-                if db_field in {"title", "content"}:
+                if db_field == "title":
                     val = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
+                    data[db_field] = val
+
+                if db_field == "content":
+                    raw = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
+                    val = clean_raw_html(raw, feed='web') # Clean article text
                     data[db_field] = val
 
             # Compute hash for deduplication
