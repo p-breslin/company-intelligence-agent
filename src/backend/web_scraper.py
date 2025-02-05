@@ -3,6 +3,7 @@ import psycopg
 import requests
 from dateutil import parser
 from bs4 import BeautifulSoup
+from operator import itemgetter
 from utils.config import config
 from utils.helpers import compute_hash
 from urllib.parse import urlparse, urljoin
@@ -13,6 +14,8 @@ class WebScraper:
     def __init__(self, targets):
         self.targets = targets
         self.db = config.get_section("database")
+        self.schema = config.get_section("schema")
+        self.field_map = config.get_section("field_mapping")
 
 
     def respect_robots(self, source):
@@ -36,12 +39,12 @@ class WebScraper:
 
 
     def scrape(self):
-        """Scrapes web pages."""
+        """Scrapes web page only for a few attributes."""
         articles = []
         headers = {"User-Agent": "Mozilla/5.0"} # spoofs browser to avoid bot detection
 
         for url in self.targets:
-            source = urlparse(url).netloc
+            source = urlparse(url).netloc # Removing https:// for consistency
 
             # Get permission and crawl delay in one call
             permission, delay = self.respect_robots(source)
@@ -62,34 +65,37 @@ class WebScraper:
             # Parse the HTML content
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Extract title and main content
-            soupTitle = soup.find("title")
-            title = soupTitle.text.strip() if soupTitle else "No Title"
-            soupContent = soup.find("article")
-            content = soupContent.text.strip() if soupContent else "Content not found"
+            # Could initialize with None values for all database fields?
+            data = {db_field: None for db_field in self.schema.keys()}
+            data['link'] = url
+            data['source'] = source
 
-            # Extract metadata: search for <meta> tag with property = the published date
-            date_meta = soup.find("meta", {"property": "article:published_time"})
-            if date_meta and "content" in date_meta.attrs:
-                published = date_meta["content"]
-                if published:
-                    try:
-                        published = parser.parse(published)
-                    except Exception as e:
-                        print(f"Error parsing date '{published}': {e}")
-                        published = None
+            # Check if feed has desired fields (source, pub, hash are exceptions)
+            for db_field, scraper_field in self.field_map.items():
+
+                # Published date: search for <meta> tag with property
+                if db_field == "published":
+                    date_meta = soup.find(
+                        "meta", {"property": "article:published_time"}
+                        )
+                    if date_meta and "content" in date_meta.attrs:
+                        published = date_meta["content"]
+                        if published:
+                            try:
+                                published = parser.parse(published)
+                            except Exception as e:
+                                print(f"Error parsing date '{published}': {e}")
+                                published = None 
+                    data[db_field] = published
+
+                if db_field in {"title", "content"}:
+                    val = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
+                    data[db_field] = val
 
             # Compute hash for deduplication
-            hash = compute_hash(title, url)
-
-            articles.append({
-                 "title": title,
-                 "url": url,
-                 "content": content,
-                 "published": published,
-                 "source": source, # Extract domain as source
-                 "hash": hash
-                 })
+            hash = compute_hash(data['title'], data['source'])
+            data['hash'] = hash
+            articles.append(data)
             
         self.store_scraped_data(articles)
 
@@ -105,14 +111,25 @@ class WebScraper:
 
         with conn.cursor() as cur:
             try:
-                cur.executemany(
-                    """
-                    INSERT INTO articles (title, link, hash, published, source)
-                    VALUES (%s, %s, %s, %s, %s)
+                # Get column names dynamically from schema
+                columns = list(self.schema.keys())
+                # Create placeholders for values
+                placeholders = ", ".join(["%s"] * len(columns))
+                # Join column names for SQL query
+                col_names = ", ".join(columns) 
+
+                # Construct dynamic INSERT statement 
+                insert_query = f"""
+                    INSERT INTO articles ({col_names})
+                    VALUES ({placeholders})
                     ON CONFLICT (hash) DO NOTHING;
-                    """,
-                    [(a["title"], a["url"], a["hash"], a["published"], a["source"])  for a in articles]
-                )
+                """
+
+                # Execute query dynamically
+                getter = itemgetter(*columns) # optimized getter for column order
+                values = [getter(a) for a in articles]
+                cur.executemany(insert_query, values)   
+
             except Exception as e:
                 print(f"Error inserting article: {e}")
 
