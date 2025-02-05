@@ -53,8 +53,11 @@ class RSSFeedFetcher:
                         data['content'] = content
 
                     if field not in {"source", "published", "content", "hash"}:
-                        # Dynamically extract rest of the fields
-                        data[field] = getattr(entry, field, None)
+                        # Dynamically extract rest of the fields (excepts for tags)
+                        val = getattr(entry, field, None)
+                        if field == 'tags' and val:
+                            val = val[0]['term']
+                        data[field] = val
 
                 hash = compute_hash(data['title'], data['source'])
                 data['hash'] = hash
