@@ -74,7 +74,7 @@ class RSSFeedFetcher:
                             content = None
                         data['content'] = content
 
-                    if field not in {"source", "published", "content"}:
+                    if field not in {"source", "published", "content", "hash"}:
                         # Dynamically extract rest of the fields
                         data[field] = getattr(entry, field, None)
 
