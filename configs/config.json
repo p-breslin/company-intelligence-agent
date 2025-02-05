@@ -15,5 +15,14 @@
         "hash": "TEXT UNIQUE NOT NULL",
         "summary": "TEXT",
         "content": "TEXT"
+    },
+    "field_mapping": {
+        "title": "title",
+        "link": "url",
+        "source": "source",
+        "published": "published",
+        "hash": "hash",
+        "summary": "None",
+        "content": "article"
     }
 }
