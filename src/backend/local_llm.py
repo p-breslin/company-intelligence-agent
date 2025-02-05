@@ -1,10 +1,9 @@
 import ollama
 import psycopg
 from utils.config import config
+from utils.helpers import token_count
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-import time
-start = time.time()
 
 class LocalLLM:
     def __init__(self):
@@ -13,6 +12,7 @@ class LocalLLM:
         self.prompts = config.get_section("prompts")
         self.chunk_size = 512
         self.chunk_overlap = 50
+        self.token_limit = 120000
 
 
     def import_data(self):
@@ -48,20 +48,24 @@ class LocalLLM:
         Don't need to simulate multi-turn chat here i.e. ollama.chat.
         Includes content chunking for efficiency.
         """
-        output = []
-        chunks = self.chunking(text)
-        for chunk in chunks:
-            prompt = f"{self.prompts['categories']}\n{chunk}"
+        tokens = token_count(text)
+
+        if tokens <= self.token_limit:
+            prompt = f"{self.prompts['categories']}\n{text}"
             response = ollama.generate(model=self.llm, prompt=prompt)
-            output.append(response["response"].strip())
+            return response["response"].strip()
+        
+        else:
+            output = []
+            chunks = self.chunking(text)
+            for chunk in chunks:
+                # No longer getting a label per article; now a label per chunk
+                prompt = f"{self.prompts['categories']}\n{chunk}"
+                response = ollama.generate(model=self.llm, prompt=prompt)
+                output.append(response["response"].strip())
 
-        # The most frequent category will be our determination
-        return max(set(output), key=output.count)
-
-
-        # prompt = f"{self.prompts["categories"]}\n{text}"
-        # response = ollama.generate(model=self.llm, prompt=prompt)
-        # return response["response"].strip()
+            # The most frequent category will be our determination
+            return max(set(output), key=output.count)
 
 
 if __name__ == "__main__":
@@ -71,6 +75,3 @@ if __name__ == "__main__":
     for content in articles:
         category = llm.categorize(content[0])
         print(f"Category: {category}")
-
-
-    print(time.time()-start, 'seconds.')
