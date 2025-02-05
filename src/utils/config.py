@@ -26,6 +26,12 @@ class ConfigLoader:
         if section not in self.config or key not in self.config[section]:
             raise KeyError(f"Key '{key}' not found in section '{section}'")
         return self.config[section][key]
+    
+    def get_list(self, key):
+        """Returns a list from the JSON config."""
+        if key not in self.config or not isinstance(self.config[key], list):
+            raise KeyError(f"Key '{key}' not found or is not a list in config file")
+        return self.config[key]
 
 
 # Create a global instance to be imported anywhere
