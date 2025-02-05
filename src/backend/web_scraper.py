@@ -139,12 +139,6 @@ class WebScraper:
 
 
 if __name__ == "__main__":
-
-    targets = [
-        "https://www.nasa.gov/news",
-        "https://www.investors.com/",
-        "https://www.nasa.gov/news",
-    ]
-
+    targets = config.get_list("test_sites")
     scraper = WebScraper(targets)
     scraper.scrape()

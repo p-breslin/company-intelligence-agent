@@ -132,11 +132,6 @@ class RSSFeedFetcher:
         
 
 if __name__ == "__main__":
-
-    feeds = [
-    "https://www.nasa.gov/rss/dyn/breaking_news.rss",
-    "https://www.nasa.gov/rss/dyn/breaking_news.rss"
-    ]
-
+    feeds = config.get_list("rss_feeds")
     fetcher = RSSFeedFetcher(feeds)
     fetcher.fetch()

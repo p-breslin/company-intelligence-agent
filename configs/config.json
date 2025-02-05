@@ -24,5 +24,14 @@
         "hash": "hash",
         "summary": "None",
         "content": "article"
-    }
+    },
+    "rss_feeds": [
+        "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+        "https://www.nasa.gov/rss/dyn/breaking_news.rss"
+    ],
+    "test_sites": [
+        "https://www.nasa.gov/news",
+        "https://www.investors.com/",
+        "https://www.nasa.gov/news"
+    ]
 }
