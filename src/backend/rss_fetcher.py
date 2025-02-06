@@ -26,41 +26,46 @@ class RSSFeedFetcher:
             for entry in feed.entries:
                 data = {}
 
-                # Check if feed has desired fields (source, pub, hash are exceptions)
+                # Loop over the desired fields in the feed
                 for field in self.schema.keys():
-                    if field == "source":
-                        # Removing https:// for consistency
-                        data["source"] = urlparse(source).netloc
+                    if field in {'title', 'link', 'author', 'summary'}:
+                        value = getattr(entry, field, None)
+                        data[field] = value
 
-                    if field == "published":
+                    if field == 'published':
                     # Parse and convert RSS date string into Python datetime object
-                        pub = entry.published if hasattr(entry, 'published') else None
-                        if pub:
+                        date = entry.published if hasattr(entry, 'published') else None
+                        if date:
                             try:
-                                pub = parser.parse(pub)
+                                date = parser.parse(date)
                             except Exception as e:
-                                print(f"Error parsing date '{pub}': {e}")
-                                pub = None
-                            data['published'] = pub
+                                print(f"Error parsing date '{date}': {e}")
+                                date = None
+                            data[field] = date
 
-                    if field == "content":
+                    if field == 'source':
+                        # Removing https:// for consistency
+                        data[field] = urlparse(source).netloc
+
+                    if field == 'content':
                     # If there is full content, extract clean text from HTML
                         if hasattr(entry, 'content'):
                             raw = entry.content[0].value
                             content = clean_raw_html(raw, feed='rss')
                         else:
                             content = None
-                        data['content'] = content
+                        data[field] = content
 
-                    if field not in {"source", "published", "content", "hash"}:
-                        # Dynamically extract rest of the fields (excepts for tags)
+                    if field == 'tags':
                         val = getattr(entry, field, None)
-                        if field == 'tags' and val:
+                        if val:
                             val = val[0]['term']
                         data[field] = val
+                    
+                    if field == 'hash':
+                        hash = compute_hash(data['title'], data['source'])
+                        data['hash'] = hash
 
-                hash = compute_hash(data['title'], data['source'])
-                data['hash'] = hash
                 articles.append(data)
 
         print("RSS feed data fetched successfully.")
