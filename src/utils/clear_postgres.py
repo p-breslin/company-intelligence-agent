@@ -6,15 +6,10 @@ from psycopg import OperationalError
 
 try:
     # Import the database configuration details
-    db = config.get_section("database")
+    db = config.get_section('DB_USER')
 
     # First connect as superuser ('postgres')
-    conn = psycopg.connect(
-        dbname = "postgres",  # Default database
-        user = db['superuser'],
-        host = db['host'],
-        port = db['port']
-    )
+    conn = psycopg.connect(**config.get_section('DB_SUPER'))
     conn.autocommit = True 
     cur = conn.cursor()
 

@@ -10,7 +10,7 @@ from utils.helpers import compute_hash, clean_raw_html
 class RSSFeedFetcher:
     def __init__(self, feeds):
         """Initialize with the database configuration details."""
-        self.db = config.get_section("database")
+        self.db = config.get_section("DB_USER")
         self.schema = config.get_section("schema")
         self.feeds = feeds
 
@@ -73,13 +73,7 @@ class RSSFeedFetcher:
         Prevents duplicate entries using the hash.
         """
         try:
-            conn = psycopg.connect(
-                dbname = self.db['dbname'],
-                user = self.db['user'],
-                password = self.db['password'],
-                host = self.db['host'],
-                port = self.db['port']
-            )
+            conn = psycopg.connect(**self.db)
             with conn.cursor() as cur:
                 try:
                     # Get column names dynamically from schema

@@ -13,7 +13,7 @@ from utils.helpers import compute_hash, clean_raw_html
 class WebScraper:
     def __init__(self, targets):
         self.targets = targets
-        self.db = config.get_section("database")
+        self.db = config.get_section("DB_USER")
         self.schema = config.get_section("schema")
         self.field_map = config.get_section("field_mapping")
 
@@ -115,13 +115,7 @@ class WebScraper:
 
 
     def store_scraped_data(self, articles):
-        conn = psycopg.connect(
-            dbname = self.db['dbname'],
-            user = self.db['user'],
-            password = self.db['password'],
-            host = self.db['host'],
-            port = self.db['port']
-        )
+        conn = psycopg.connect(**self.db)
 
         with conn.cursor() as cur:
             try:

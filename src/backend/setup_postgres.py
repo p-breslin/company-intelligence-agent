@@ -5,7 +5,7 @@ from psycopg import OperationalError
 class PostgreSQLsetup:
     def __init__(self):
         """Initialize with the database configuration details."""
-        self.db = config.get_section("database")
+        self.db = config.get_section("DB_USER")
         self.schema = config.get_section("schema")
 
     def setup(self):
@@ -15,12 +15,7 @@ class PostgreSQLsetup:
         """
         try:
             # First connect as superuser ('postgres')
-            conn = psycopg.connect(
-                dbname = "postgres", # Default database
-                user = self.db['superuser'],
-                host = self.db['host'],
-                port = self.db['port']
-            )
+            conn = psycopg.connect(**config.get_section('DB_SUPER'))
             conn.autocommit = True # Ensures SQL commands take effect immediately
             cur = conn.cursor()
 
@@ -72,13 +67,7 @@ class PostgreSQLsetup:
         """Creates the 'articles' table for storing content inside the database."""
         try:
             # Connect to the newly created database
-            conn = psycopg.connect(
-                dbname = self.db['dbname'],
-                user = self.db['user'],
-                password = self.db['password'],
-                host = self.db['host'],
-                port = self.db['port']
-            )
+            conn = psycopg.connect(**self.db)
             cur = conn.cursor()
 
             # Check if the table exists

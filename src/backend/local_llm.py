@@ -7,7 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class LocalLLM:
     def __init__(self):
-        self.db = config.get_section("database")
+        self.db = config.get_section("DB_USER")
         self.llm = config.get_section("models")["llama"]
         self.prompts = config.get_section("prompts")
         self.chunking = config.get_section("chunking")
@@ -15,13 +15,7 @@ class LocalLLM:
 
     def import_data(self):
         """Imports stored data from database."""
-        conn = psycopg.connect(
-            dbname = self.db['name'],
-            user = self.db['user'],
-            password = self.db['pwd'],
-            host = self.db['host'],
-            port = self.db['port']
-        )
+        conn = psycopg.connect(**self.db)
         cursor = conn.cursor()
         cursor.execute("SELECT content FROM articles LIMIT 1;")
         articles = cursor.fetchall() # list of tuples (each one is a database row)
