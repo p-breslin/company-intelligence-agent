@@ -10,9 +10,7 @@ class LocalLLM:
         self.db = config.get_section("database")
         self.llm = config.get_section("models")["llama"]
         self.prompts = config.get_section("prompts")
-        self.chunk_size = 512
-        self.chunk_overlap = 50
-        self.token_limit = 120000
+        self.chunking = config.get_section("chunking")
 
 
     def import_data(self):
@@ -36,8 +34,8 @@ class LocalLLM:
         Text splitter for making content chunks for the LLM.
         """
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size = self.chunk_size,
-            chunk_overlap = self.chunk_overlap
+            chunk_size = self.chunking["size"],
+            chunk_overlap = self.chunking["overlap"]
         )
         return splitter.split_text(text)
 
@@ -50,7 +48,7 @@ class LocalLLM:
         """
         tokens = token_count(text)
 
-        if tokens <= self.token_limit:
+        if tokens <= self.chunking["limit"]:
             prompt = f"{self.prompts['categories']}\n{text}"
             response = ollama.generate(model=self.llm, prompt=prompt)
             return response["response"].strip()

@@ -41,9 +41,13 @@
         "llama": "llama3.2:1b",
         "deepseek": "deepseek-r1:1.5b"
     },
+    "chunking": {
+        "size": 512,
+        "overlap": 50,
+        "limit": 120000
+    },
     "prompts": {
         "categories": "Consider these categories: Executive Team News, Company Strategy, Product Updates, Customer Stories, Market Analysis. Read the article below and categorize it by choosing ONE of the given categories. Your response should be the chosen category and nothing else.",
         "details": "Return a JSON with 'company', 'executives', 'product', 'event'."
     }
 }
-
