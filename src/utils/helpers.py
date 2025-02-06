@@ -31,7 +31,7 @@ def clean_raw_html(raw_html, feed="rss"):
         # Remove excessive whitespace (noramlizes whitespace)
         text = re.sub(r"\s+", " ", text).strip()
     
-    return text   
+    return text
 
 
 def token_count(text):
