@@ -15,7 +15,6 @@ class WebScraper:
         self.targets = targets
         self.db = config.get_section("DB_USER")
         self.schema = config.get_section("schema")
-        self.field_map = config.get_section("field_mapping")
 
 
     def respect_robots(self, source):
@@ -65,50 +64,54 @@ class WebScraper:
             # Parse the HTML content
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Could initialize with None values for all database fields?
+            # Initialize with None values for all database fields (efficient?)
             data = {db_field: None for db_field in self.schema.keys()}
             data['link'] = url
             data['source'] = source
 
-            # Check if feed has desired fields (source, pub, hash are exceptions)
-            for db_field, scraper_field in self.field_map.items():
+            # Loop through database fields and look for desired items
+            for db_field in self.schema.keys():
+
+                if db_field == "title":
+                    value = soup.find(db_field).text.strip() if soup.find(db_field) else None
+                    data[db_field] = value
 
                 # Published date: search for <meta> tag with property
                 if db_field == "published":
-                    date_meta = soup.find(
-                        "meta", {"property": "article:published_time"}
-                        )
-                    if date_meta and "content" in date_meta.attrs:
-                        published = date_meta['content']
+                    date = soup.find('meta', {'property': 'article:published_time'})
+                    if date and "content" in date.attrs:
+                        published = date['content']
                         if published:
                             try:
                                 published = parser.parse(published)
                                 data[db_field] = published
                             except Exception as e:
                                 print(f"Error parsing date '{published}': {e}")
-                                published = None 
-                    else:
-                        continue
-
-                if db_field == "title":
-                    val = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
-                    data[db_field] = val
 
                 if db_field == "content":
-                    raw = soup.find(scraper_field).text.strip() if soup.find(scraper_field) else None
+                    raw = soup.find('article').text.strip() if soup.find('article') else None
                     if raw:
-                        val = clean_raw_html(raw, feed='web') # Clean article text
-                    else:
-                        continue
+                        value = clean_raw_html(raw, feed='web') # Clean article text
+                        data[db_field] = value
+
+                if db_field == "summary":
+                    # Search for summary using description or OpenGraph attributes
+                    for x in [{"name": "description"}, {"property": "og:description"}]:
+                        tag = soup.find("meta", x)
+                        if tag and "content" in tag.attrs:
+                            data[db_field] = tag['content']
+                            break  # Stop if a valid summary is found
 
                 if db_field == "tags":
                     tags = soup.find("meta", {"name": "keywords"})
                     if tags and "content" in tags.attrs:
                         data[db_field] = tags['content']
 
-            # Compute hash for deduplication
-            hash = compute_hash(data['title'], data['source'])
-            data['hash'] = hash
+                if db_field == "hash":
+                    # Compute hash for deduplication
+                    hash = compute_hash(data['title'], data['source'])
+                    data[db_field] = hash
+
             articles.append(data)
             
         self.store_scraped_data(articles)
