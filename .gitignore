@@ -2,4 +2,4 @@
 src/company_intelligence_agent.egg-info/
 src/utils/__pycache__/
 /rough_work
-src/utils/DB_init.py
+scripts/postgres_init.py
