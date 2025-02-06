@@ -1,11 +1,16 @@
 {
-    "database": {
+    "DB_USER": {
         "dbname": "cia",
         "user": "testusr",
         "password": "testpwd",
         "host": "localhost",
-        "port": 5432,
-        "superuser": "peter"
+        "port": 5432
+    },
+    "DB_SUPER": {
+        "dbname": "postgres",
+        "user": "peter",
+        "host": "localhost",
+        "port": 5432
     },
     "schema": {
         "title": "TEXT NOT NULL",
