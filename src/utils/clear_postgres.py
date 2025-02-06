@@ -24,11 +24,11 @@ try:
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
         WHERE pg_stat_activity.datname = %s;
-    """, (db['name'],))
+    """, (db['dbname'],))
     
     # Drop the database
-    cur.execute(f"DROP DATABASE IF EXISTS {db['name']};")
-    print(f"Database '{db['name']}' dropped successfully.")
+    cur.execute(f"DROP DATABASE IF EXISTS {db['dbname']};")
+    print(f"Database '{db['dbname']}' dropped successfully.")
 
     # Drop the user
     cur.execute(f"DROP USER IF EXISTS {db['user']};")

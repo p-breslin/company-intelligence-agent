@@ -116,9 +116,9 @@ class WebScraper:
 
     def store_scraped_data(self, articles):
         conn = psycopg.connect(
-            dbname = self.db['name'],
+            dbname = self.db['dbname'],
             user = self.db['user'],
-            password = self.db['pwd'],
+            password = self.db['password'],
             host = self.db['host'],
             port = self.db['port']
         )

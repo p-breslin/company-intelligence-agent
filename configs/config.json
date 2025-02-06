@@ -1,8 +1,8 @@
 {
     "database": {
-        "name": "cia",
+        "dbname": "cia",
         "user": "testusr",
-        "pwd": "testpwd",
+        "password": "testpwd",
         "host": "localhost",
         "port": 5432,
         "superuser": "peter"

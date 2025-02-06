@@ -34,7 +34,7 @@ class PostgreSQLsetup:
 
             # Create the user with DB creation rights if not exists
             if not user_exists:
-                cur.execute(f"CREATE USER {self.db['user']} WITH PASSWORD '{self.db['pwd']}';")
+                cur.execute(f"CREATE USER {self.db['user']} WITH PASSWORD '{self.db['password']}';")
                 cur.execute(f"ALTER USER {self.db['user']} CREATEDB;")
                 print(f"User '{self.db['user']}' created successfully.")
             else:
@@ -43,17 +43,17 @@ class PostgreSQLsetup:
             # Check if the database exists
             cur.execute(f"""
                 SELECT EXISTS (
-                    SELECT FROM pg_database WHERE datname = '{self.db['name']}'
+                    SELECT FROM pg_database WHERE datname = '{self.db['dbname']}'
                 );
             """)
             db_exists = cur.fetchone()[0]
 
             # Create the database if not exists
             if not db_exists:
-                cur.execute(f"CREATE DATABASE {self.db['name']} OWNER {self.db['user']};")
-                print(f"Database '{self.db['name']}' created and assigned to '{self.db['user']}'.")
+                cur.execute(f"CREATE DATABASE {self.db['dbname']} OWNER {self.db['user']};")
+                print(f"Database '{self.db['dbname']}' created and assigned to '{self.db['user']}'.")
             else:
-                print(f"Database '{self.db['name']}' already exists.")
+                print(f"Database '{self.db['dbname']}' already exists.")
 
             # Closing the cursor and connection frees up resources
             cur.close()
@@ -73,9 +73,9 @@ class PostgreSQLsetup:
         try:
             # Connect to the newly created database
             conn = psycopg.connect(
-                dbname = self.db['name'],
+                dbname = self.db['dbname'],
                 user = self.db['user'],
-                password = self.db['pwd'],
+                password = self.db['password'],
                 host = self.db['host'],
                 port = self.db['port']
             )
