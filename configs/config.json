@@ -46,8 +46,8 @@
     },
 
     "rss_feeds": [
-        "https://www.nasa.gov/rss/dyn/breaking_news.rss",
-        "https://www.nasa.gov/rss/dyn/breaking_news.rss"
+        "https://www.fierce-network.com/rss/Fierce%20Network%20Homepage/xml",
+        "https://www.networkcomputing.com/rss.xml"
     ],
 
     "test_sites": [
