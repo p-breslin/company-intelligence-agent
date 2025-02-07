@@ -70,14 +70,14 @@ class GenerateEmbeddings:
 
                 # Store the collection for the retrieval embedding
                 collection.add(
-                    ids=[f"{data['id']}_retrieval"],
+                    ids=[f"{data['hash']}_retrieval"],
                     embeddings=[fast_emb],
                     documents=[data["content"]],
                     metadatas=[metadata_dict | {"model": self.model1}]
                 )
                 # Store the collection for the re-ranking embedding
                 collection.add(
-                    ids=[f"{data['id']}_ranking"],
+                    ids=[f"{data['hash']}_ranking"],
                     embeddings=[rank_emb],
                     documents=[data["content"]],
                     metadatas=[metadata_dict | {"model": self.model2}]
@@ -85,11 +85,11 @@ class GenerateEmbeddings:
             else:
                 # Store the collection using default embedding model (all-MiniLM-L6-v2)
                 collection.add(
-                    ids=[f"{data['id']}"],
+                    ids=[f"{data['hash']}"],
                     documents=[data["content"]],
                     metadatas=[metadata_dict]
                     )
-            print(f"Stored embeddings for article {data['id']}")
+            print(f"Stored embeddings for article {data['hash']}")
 
 
 if __name__ == "__main__":

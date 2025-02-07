@@ -36,7 +36,7 @@
             "model"
         ],
         "target_data": [
-            "id", 
+            "hash", 
             "content",
             "title", 
             "source", 
