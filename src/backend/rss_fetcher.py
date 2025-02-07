@@ -30,6 +30,8 @@ class RSSFeedFetcher:
                 for field in self.schema.keys():
                     if field in {'title', 'link', 'author', 'summary'}:
                         value = getattr(entry, field, None)
+                        if value and field=='title':
+                            value = clean_raw_html(value, feed='rss')
                         data[field] = value
 
                     if field == 'published':
@@ -53,14 +55,16 @@ class RSSFeedFetcher:
                             raw = entry.content[0].value
                             content = clean_raw_html(raw, feed='rss')
                         else:
-                            content = None
+                            content = getattr(entry, 'summary', None)
                         data[field] = content
 
                     if field == 'tags':
                         val = getattr(entry, field, None)
                         if val:
                             val = val[0]['term']
-                        data[field] = val
+                            data[field] = val
+                        else:
+                            data[field] = 'None'
                     
                     if field == 'hash':
                         hash = compute_hash(data['title'], data['source'])
