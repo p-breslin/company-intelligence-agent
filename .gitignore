@@ -3,3 +3,8 @@ src/company_intelligence_agent.egg-info/
 src/utils/__pycache__/
 /rough_work
 scripts/postgres_init.py
+data/chroma/e3ba9b5c-d0b2-47b7-b9b3-add13f803bc8/link_lists.bin
+data/chroma/e3ba9b5c-d0b2-47b7-b9b3-add13f803bc8/length.bin
+data/chroma/e3ba9b5c-d0b2-47b7-b9b3-add13f803bc8/header.bin
+data/chroma/e3ba9b5c-d0b2-47b7-b9b3-add13f803bc8/data_level0.bin
+data/chroma/chroma.sqlite3
