@@ -5,3 +5,4 @@ src/utils/__pycache__/
 scripts/postgres_init.py
 data
 scripts/chroma_init.py
+src/backend/__pycache__/scraper.cpython-313.pyc
