@@ -4,16 +4,16 @@ from datetime import datetime
 from utils.config import config 
 from sentence_transformers import SentenceTransformer
 
-import sys
-
 
 class GenerateEmbeddings:
-    def __init__(self):
+    def __init__(self, custom=False):
         self.chroma = config.get_section('chroma')
-        self.model1 = "all-MiniLM-L6-v2" # For fast retrieval
-        self.model2 = "multi-qa-MiniLM-L6-cos-v1" # For re-ranking
-        self.retrieval_model = SentenceTransformer(self.model1)
-        self.ranking_model = SentenceTransformer(self.model2)
+        self.custom = custom
+        if custom:
+            self.model1 = "all-MiniLM-L6-v2" # For fast retrieval
+            self.model2 = "multi-qa-MiniLM-L6-cos-v1" # For re-ranking
+            self.retrieval_model = SentenceTransformer(self.model1)
+            self.ranking_model = SentenceTransformer(self.model2)
 
 
     def load_data(self):
@@ -50,9 +50,6 @@ class GenerateEmbeddings:
         for article in articles:
             data = dict(zip(self.chroma["target_data"], article))
 
-            # Generate embeddings
-            fast_embedding, rank_embedding = self.generate_embeddings(data["content"])
-
             # ChromaDB doesn’t support certain dtypes in metadata
             # Must ensure all metadata values are converted to strings
             metadata_dict = {}
@@ -61,28 +58,37 @@ class GenerateEmbeddings:
                     value = data[key]
                     if isinstance(value, (list, dict, tuple, set, bytes)):
                         value = str(value)
-                        
+
                     # Convert datetime to ISO 8601 format (YYYY-MM-DD HH:MM:SS)
                     elif isinstance(value, datetime):
                         value = value.isoformat()
                     metadata_dict[key] = value
 
-            # Store the collection for the retrieval embedding
-            collection.add(
-                ids=[f"{data['id']}_retrieval"],
-                embeddings=[fast_embedding],
-                documents=[data["content"]],
-                metadatas=[metadata_dict | {"model": self.model1}]
-            )
+            if self.custom:
+                # Generate custom embeddings
+                fast_emb, rank_emb = self.generate_embeddings(data["content"])
 
-            # Store the collection for the re-ranking embedding
-            collection.add(
-                ids=[f"{data['id']}_ranking"],
-                embeddings=[rank_embedding],
-                documents=[data["content"]],
-                metadatas=[metadata_dict | {"model": self.model2}]
+                # Store the collection for the retrieval embedding
+                collection.add(
+                    ids=[f"{data['id']}_retrieval"],
+                    embeddings=[fast_emb],
+                    documents=[data["content"]],
+                    metadatas=[metadata_dict | {"model": self.model1}]
                 )
-
+                # Store the collection for the re-ranking embedding
+                collection.add(
+                    ids=[f"{data['id']}_ranking"],
+                    embeddings=[rank_emb],
+                    documents=[data["content"]],
+                    metadatas=[metadata_dict | {"model": self.model2}]
+                    )
+            else:
+                # Store the collection using default embedding model (all-MiniLM-L6-v2)
+                collection.add(
+                    ids=[f"{data['id']}"],
+                    documents=[data["content"]],
+                    metadatas=[metadata_dict]
+                    )
             print(f"Stored embeddings for article {data['id']}")
 
 
