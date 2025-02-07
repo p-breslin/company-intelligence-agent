@@ -28,17 +28,20 @@
     "chroma": {
         "root": "./data/chroma/",
         "dbname": "database",
-        "collection": [
-            "id", 
-            "embedding", 
-            "text"
-        ],
         "metadata": [
             "title", 
-            "date", 
-            "url", 
-            "category", 
-            "type"
+            "source", 
+            "published", 
+            "tags", 
+            "model"
+        ],
+        "target_data": [
+            "id", 
+            "content",
+            "title", 
+            "source", 
+            "published", 
+            "tags"
         ]
     },
 
