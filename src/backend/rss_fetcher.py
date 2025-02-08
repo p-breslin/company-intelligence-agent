@@ -4,7 +4,7 @@ from dateutil import parser
 from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse
-from utils.helpers import compute_hash, clean_raw_html
+from utils.helpers import compute_hash, clean_html
 
 
 class RSSFeedFetcher:
@@ -31,7 +31,7 @@ class RSSFeedFetcher:
                     value = getattr(entry, field, None)
 
                     if field in {"title", "link", "author", "summary"}:
-                        data[field] = clean_raw_html(value, feed="rss") if value and field == "title" else value
+                        data[field] = clean_html(value, feed="rss") if value and field == "title" else value
 
                     elif field == "published":
                         try:
@@ -46,7 +46,7 @@ class RSSFeedFetcher:
 
                     elif field == "content":
                     # Use cleaned full content if there; otherwise use summary
-                        data[field] = clean_raw_html(entry.content[0].value, feed="rss") if hasattr(entry, field) else getattr(entry, "summary", None)
+                        data[field] = clean_html(entry.content[0].value, feed="rss") if hasattr(entry, field) else getattr(entry, "summary", None)
 
                     elif field == "tags":
                         data[field] = value[0]['term'] if value else None
