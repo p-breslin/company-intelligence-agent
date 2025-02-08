@@ -2,7 +2,7 @@ import re
 import html
 import hashlib
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 
 def compute_hash(title, url):
@@ -11,7 +11,7 @@ def compute_hash(title, url):
     return hashlib.md5((title + base_domain).encode('utf-8')).hexdigest()
 
 
-def clean_raw_html(raw_html, feed="rss"):
+def clean_html(raw_html, feed="rss"):
     """Extracts text from raw HTML while removing unnecessary elements."""
 
     # Parse with BeautifulSoup to remove HTML tags
@@ -33,6 +33,28 @@ def clean_raw_html(raw_html, feed="rss"):
     
     return text
 
+
+def convert_rss(rss_list):
+    """Converts an RSS feed URL to the standard website domain."""
+    converted = []
+    for rss_url in rss_list:
+        parsed_url = urlparse(rss_url)
+
+        # Remove known RSS-related path elements
+        path_elems = r"(/?(rss|feed|feeds|index\.rss|rss\.xml|atom\.xml)(/.*)?)$"
+        new_path = re.sub(path_elems, '', parsed_url.path, flags=re.IGNORECASE)
+
+        # Handle common feed subdomains like "feeds.website.com"
+        domain = parsed_url.netloc
+        if domain.startswith("feeds."):
+            domain = domain.replace("feeds.", "", 1)
+        
+        # Reconstruct the URL with new components
+        website = urlunparse((parsed_url.scheme, domain, new_path, '', '', ''))
+        converted.append(website.rstrip('/')) # Remove trailing slashes
+        print(website.rstrip('/'))
+
+    return converted
 
 def token_count(text):
     """
