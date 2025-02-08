@@ -95,7 +95,7 @@ def store_to_postgres(articles):
         print("Database connection failed:", e)
 
 
-def load_postgres_data(self, desired_data):
+def load_postgres_data(desired_data):
     """
     Loads only the desired data (defined by the columns) stored in PostgreSQL database.
     """
