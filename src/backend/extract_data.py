@@ -1,6 +1,6 @@
 from utils.config import config
-from rss_handler import RSSHandler
-from async_scraper import AsyncScraper
+from async_rss_handler import RSSHandler
+from async_web_scraper import AsyncScraper
 from utils.helpers import store_to_postgres
 
 
