@@ -1,7 +1,7 @@
 import chromadb
 from datetime import datetime
 from utils.config import config 
-from utils.config import load_postgres_data
+from utils.helpers import load_postgres_data
 
 
 class GenerateEmbeddings:
@@ -73,7 +73,7 @@ class GenerateEmbeddings:
                     documents=[data["content"]],
                     metadatas=[metadata_dict]
                     )
-            print(f"Stored embeddings for article {data['hash']}")
+        print(f"Stored embeddings.")
 
 
 if __name__ == "__main__":
