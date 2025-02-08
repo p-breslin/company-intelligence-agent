@@ -1,54 +1,38 @@
-import psycopg
 import chromadb
 from datetime import datetime
 from utils.config import config 
-from sentence_transformers import SentenceTransformer
+from utils.config import load_postgres_data
 
 
 class GenerateEmbeddings:
     def __init__(self, custom=False):
-        self.chroma = config.get_section('chroma')
+        self.chroma = config.get_section("chroma")
         self.custom = custom
         if custom:
-            self.model1 = "all-MiniLM-L6-v2" # For fast retrieval
-            self.model2 = "multi-qa-MiniLM-L6-cos-v1" # For re-ranking
+            from sentence_transformers import SentenceTransformer
+            self.model1 = "all-MiniLM-L6-v2"  # For fast retrieval
+            self.model2 = "multi-qa-MiniLM-L6-cos-v1"  # For re-ranking
             self.retrieval_model = SentenceTransformer(self.model1)
             self.ranking_model = SentenceTransformer(self.model2)
-
-
-    def load_data(self):
-        """
-        Loads only the desired data stored in PostgreSQL database.
-        Desired as defined in the config file.
-        """
-        conn = psycopg.connect(**config.get_section('DB_USER'))
-        cursor = conn.cursor()
-        columns = ", ".join(self.chroma['target_data'])
-        cursor.execute(f"SELECT {columns} FROM articles;")
-        articles = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        print("Articles loaded from postgreSQL database.")
-        return articles
     
 
     def generate_embeddings(self, text):
         """Generates embeddings for retrieval and re-ranking models."""
-        fast_embedding = self.retrieval_model.encode(text).tolist()
-        print("Retrieval embedding generated")
-        rank_embedding = self.ranking_model.encode(text).tolist()
-        print("Ranking embedding generated")
-        return fast_embedding, rank_embedding
+        fast_emb = self.retrieval_model.encode(text).tolist()
+        rank_emb = self.ranking_model.encode(text).tolist()
+        return fast_emb, rank_emb
 
 
     def store_embeddings(self):
         """Stores embeddings of the postgreSQL data in the ChromaDB database."""
         client = chromadb.PersistentClient(path=self.chroma["root"])
         collection = client.get_or_create_collection(name=self.chroma["dbname"])
-        articles = self.load_data()      
+
+        # Load desired data from database by specifying the columns
+        articles = load_postgres_data(self.chroma["data"])      
 
         for article in articles:
-            data = dict(zip(self.chroma["target_data"], article))
+            data = dict(zip(self.chroma["data"], article))
 
             # ChromaDB doesn’t support certain dtypes in metadata
             # Must ensure all metadata values are converted to strings

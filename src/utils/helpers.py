@@ -15,25 +15,21 @@ def compute_hash(title, url):
 
 
 def clean_html(raw_html, feed="rss"):
-    """Extracts text from raw HTML while removing unnecessary elements."""
+    """Extracts text from raw HTML and removes unnecessary elements."""
 
     # Parse with BeautifulSoup to remove HTML tags
     soup = BeautifulSoup(raw_html, "html.parser")
     
     if feed=="rss":
-        # Extract text while preserving paragraph breaks
+        # Preserve paragraph breaks; normalize whitespace; convert HTML entities
         text = "\n\n".join(soup.stripped_strings)
-
-        # Normalize spacing and convert HTML entities
         text = re.sub(r"\s+", " ", html.unescape(text)).strip()
 
     if feed=="web":
         # Use space instead of newlines for better readability
         text = soup.get_text(separator=" ") 
-
-        # Remove excessive whitespace (noramlizes whitespace)
         text = re.sub(r"\s+", " ", text).strip()
-    
+
     return text
 
 
@@ -97,6 +93,21 @@ def store_to_postgres(articles):
 
     except Exception as e:
         print("Database connection failed:", e)
+
+
+def load_postgres_data(self, desired_data):
+    """
+    Loads only the desired data (defined by the columns) stored in PostgreSQL database.
+    """
+    conn = psycopg.connect(**config.get_section("DB_USER"))
+    cursor = conn.cursor()
+    columns = ", ".join(desired_data)
+    cursor.execute(f"SELECT {columns} FROM articles;")
+    articles = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    print("Articles loaded from postgreSQL database.")
+    return articles
 
         
 def token_count(text):
