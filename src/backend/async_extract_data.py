@@ -5,13 +5,18 @@ from utils.helpers import store_to_postgres
 
 
 if __name__ == "__main__":
-    feeds = ["https://www.fierceelectronics.com/rss/xml"]
+    """Collects and runs RSS and Scraper routines for asynchronous data extraction."""
     # feeds = config.get_list("rss_feeds")
-    rss_handler = RSSHandler(feeds)
-    articles = rss_handler.fetch()  # Fetch RSS data
+    feeds = ["https://www.fierceelectronics.com/rss/xml"]
 
-    if rss_handler.incomplete:  # Scrape if there is incomplete data
+    # RSS handler
+    rss_handler = RSSHandler(feeds)
+    articles = rss_handler.fetch()
+
+    # Activate scraper if there is incomplete data
+    if rss_handler.incomplete:
         scraper = AsyncScraper(rss_handler.incomplete)
         scraper.async_scrape(articles) 
 
-    store_to_postgres(articles)  # Save to database
+    # Save to postgreSQL database
+    store_to_postgres(articles)

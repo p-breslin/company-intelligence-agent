@@ -9,7 +9,10 @@ from utils.helpers import compute_hash, clean_html
 
 class AsyncScraper:
     def __init__(self, incomplete):
-        """Initialize with the list of URLs (incomplete RSS feed data) to scrape."""
+        """
+        Performs web scraping asynchronously for increased efficiency.
+        Initialize with the list of URLs (incomplete RSS feed data) to scrape.
+        """
         self.incomplete = incomplete
 
 
@@ -46,6 +49,7 @@ class AsyncScraper:
         await asyncio.sleep(delay)  # Respect crawl delay
 
         try:
+            # Asynchronous context management
             async with session.get(url, headers=headers, timeout=10) as response:
                 if response.status != 200:
                     print(f"Failed to fetch {url} - Status Code: {response.status}")
@@ -121,6 +125,7 @@ class AsyncScraper:
         print(f"Scraping {len(self.incomplete)} articles asynchronously...")
 
         tasks = []
+        # Create a session object to be reused for multiple HTTP requests
         async with aiohttp.ClientSession() as session:
             for url in self.incomplete:
                 # Find the relevant article that needs scraping
@@ -128,19 +133,20 @@ class AsyncScraper:
                 if article:
                     tasks.append(self.single_scrape(session, url, article))
 
-            scraped_results = await asyncio.gather(*tasks)  # Run all tasks in parallel
-        return scraped_results  # Returns list of (url, articles) tuples
+            # Concurrently run multiple asynchronous tasks in parallel
+            scraped_results = await asyncio.gather(*tasks)
+        return scraped_results
 
 
     def async_scrape(self, articles):
         """Starts async scraping and updates missing content."""
-        scraped_data = asyncio.run(self.scrape_articles(articles))  # Run async scraper
+        scraped_data = asyncio.run(self.scrape_articles(articles))
 
-        # Merge scraped data back into articles list
+        # Merge scraped data back into list of articles
         for url, data in scraped_data:
-            if data:  # Only update if scrape was successful
+            if data:
                 for article in articles:
                     if article["link"] == url:
                         article.update(data)
-                        break  # Stop searching once found
+                        break
         print("Async scraping complete.")
