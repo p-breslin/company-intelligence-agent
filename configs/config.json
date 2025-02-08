@@ -47,14 +47,7 @@
 
     "rss_feeds": [
         "https://www.networkcomputing.com/rss.xml",
-        "https://www.fierce-network.com/rss/Fierce%20Network%20Homepage/xml"
-    ],
-
-    "test_sites": [
-        "https://www.nasa.gov/news-release/",
-        "https://www.nasa.gov/news",
-        "https://www.investors.com/",
-        "https://www.nasa.gov/news"
+        "https://www.fierceelectronics.com/rss/xml"
     ],
 
     "models": {
