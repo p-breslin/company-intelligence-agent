@@ -1,10 +1,8 @@
-import psycopg
 import feedparser
 from dateutil import parser
-from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse
-from utils.helpers import compute_hash, clean_html
+from utils.helpers import compute_hash, clean_html, store_to_postgres
 
 
 class RSSFeedFetcher:
@@ -24,7 +22,8 @@ class RSSFeedFetcher:
 
             # Loop through every feed entry and add data to a dict
             for entry in feed.entries:
-                data = {}
+                # Initialize with None values for all database fields
+                data = {field: None for field in self.schema.keys()}
 
                 # Loop over the desired fields in the feed
                 for field in self.schema.keys():
@@ -39,7 +38,6 @@ class RSSFeedFetcher:
                             data[field] = parser.parse(value) if value else None
                         except Exception as e:
                             print(f"Error parsing date '{value}': {e}")
-                            data[field] = None
 
                     elif field == "source":
                         data[field] = urlparse(source).netloc 
@@ -55,48 +53,8 @@ class RSSFeedFetcher:
                         data["hash"] = compute_hash(data["title"], data["source"])
 
                 articles.append(data)
-
         print("RSS feed data fetched successfully.")
-        self.store(articles)
-
-
-    def store(self, articles):
-        """
-        Inserts RSS articles into PostgreSQL database.
-        Prevents duplicate entries using the hash.
-        """
-        try:
-            conn = psycopg.connect(**self.db)
-            with conn.cursor() as cur:
-                try:
-                    # Get column names dynamically from schema
-                    columns = list(self.schema.keys())
-                    # Create placeholders for values
-                    placeholders = ", ".join(["%s"] * len(columns))
-                    # Join column names for SQL query
-                    col_names = ", ".join(columns) 
-
-                    # Construct dynamic INSERT statement 
-                    insert_query = f"""
-                        INSERT INTO articles ({col_names})
-                        VALUES ({placeholders})
-                        ON CONFLICT (hash) DO NOTHING;
-                    """
-
-                    # Execute query dynamically
-                    getter = itemgetter(*columns) # optimized getter for column order
-                    values = [getter(a) for a in articles]
-                    cur.executemany(insert_query, values)                    
-            
-                except Exception as e:
-                    print(f"Error inserting article: {e}")
-            
-            conn.commit()
-            conn.close()
-            print("RSS data successfully stored in PostgreSQL table.")
-
-        except Exception as e:
-            print("Database connection failed:", e)
+        store_to_postgres(articles)
         
 
 if __name__ == "__main__":

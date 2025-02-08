@@ -1,13 +1,11 @@
 import time
-import psycopg
 import requests
 from dateutil import parser
 from bs4 import BeautifulSoup
-from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
-from utils.helpers import compute_hash, clean_html, convert_rss
+from utils.helpers import compute_hash, clean_html, convert_rss, store_to_postgres
 
 
 class WebScraper:
@@ -95,7 +93,6 @@ class WebScraper:
                                  break
                             except Exception as e:
                                 print(f"Error parsing date '{published}': {e}")
-                            
 
                 elif field == "content":
                     tag = soup.find("article")
@@ -124,40 +121,7 @@ class WebScraper:
                     data[field] = compute_hash(data.get("title"), data.get("source"))
 
             articles.append(data)
-            
-        self.store_scraped_data(articles)
-
-
-    def store_scraped_data(self, articles):
-        conn = psycopg.connect(**self.db)
-
-        with conn.cursor() as cur:
-            try:
-                # Get column names dynamically from schema
-                columns = list(self.schema.keys())
-                # Create placeholders for values
-                placeholders = ", ".join(["%s"] * len(columns))
-                # Join column names for SQL query
-                col_names = ", ".join(columns) 
-
-                # Construct dynamic INSERT statement 
-                insert_query = f"""
-                    INSERT INTO articles ({col_names})
-                    VALUES ({placeholders})
-                    ON CONFLICT (hash) DO NOTHING;
-                """
-
-                # Execute query dynamically
-                getter = itemgetter(*columns) # optimized getter for column order
-                values = [getter(a) for a in articles]
-                cur.executemany(insert_query, values)   
-
-            except Exception as e:
-                print(f"Error inserting article: {e}")
-
-        conn.commit()
-        conn.close()
-        print("Web scraped data successfully stored in PostgreSQL table.")
+        store_to_postgres(articles)
 
 
 if __name__ == "__main__":
