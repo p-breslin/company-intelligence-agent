@@ -67,27 +67,29 @@ class WebScraper:
             soup = BeautifulSoup(response.text, 'html.parser')
 
             for article in self.rss_data:
+                print(article['hash'])
 
                 # Loop through database fields and look for desired items if missing
                 for field, entry in article.items():
+                    print(article['title'])
 
                     if entry is not None:
                         continue
 
                     if field == "title":
                         value = soup.find(field).text.strip() if soup.find(field) else unknown
-                        feed[field] = value
+                        article[field] = value
 
                     # Published date: search for <meta> tag with property
                     if field == "published":
-                        feed[field] = unknown # default
+                        article[field] = unknown # default
                         date = soup.find('meta', {'property': 'article:published_time'})
                         if date and "content" in date.attrs:
                             published = date['content']
                             if published:
                                 try:
                                     published = parser.parse(published)
-                                    feed[field] = published
+                                    article[field] = published
                                 except Exception as e:
                                     print(f"Error parsing date '{published}': {e}")
 
@@ -96,32 +98,32 @@ class WebScraper:
                         for x in [{"name": "description"}, {"property": "og:description"}]:
                             tag = soup.find("meta", x)
                             if tag and "content" in tag.attrs:
-                                feed[field] = tag['content']
+                                article[field] = tag['content']
                                 break  # Stop if a valid summary is found
                             else:
-                                feed["summary"] = unknown
+                                article["summary"] = unknown
 
                     if field == "content":
                         raw = soup.find('article').text.strip() if soup.find('article') else None
                         if raw:
                             value = clean_raw_html(raw, feed='web') # Clean article text
-                            feed[field] = value
+                            article[field] = value
                         else:
                             # Set content as summary if no content found
-                            feed[field] = feed["summary"]
-                            feed.pop("summary") # only keep content
+                            article[field] = article["summary"]
+                            article.pop("summary") # only keep content
 
                     if field == "tags":
                         tags = soup.find("meta", {"name": "keywords"})
                         if tags and "content" in tags.attrs:
-                            feed[field] = tags['content']
+                            article[field] = tags['content']
                         else:
                             # TO-DO: ML CLASSIFIER
-                            feed[field] = unknown                    
+                            article[field] = unknown                    
 
                     if field == "hash":
                         # Compute hash for deduplication
-                        hash = compute_hash(feed['title'], feed['source'])
-                        feed[field] = hash
+                        hash = compute_hash(article['title'], article['source'])
+                        article[field] = hash
 
         return self.rss_data
