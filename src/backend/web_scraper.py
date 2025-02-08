@@ -7,7 +7,7 @@ from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
-from utils.helpers import compute_hash, clean_raw_html
+from utils.helpers import compute_hash, clean_html, convert_rss
 
 
 class WebScraper:
@@ -22,7 +22,6 @@ class WebScraper:
         Determines if scraping is allowed and what the crawl delay is.
         If no delay, still rate limit to avoid getting blocked.
         """
-        
         robots_url = urljoin("https://" + source, "/robots.txt")
         rp = RobotFileParser()
         
@@ -62,55 +61,56 @@ class WebScraper:
                 return None
 
             # Parse the HTML content
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.text, "html.parser")
 
-            # Initialize with None values for all database fields (efficient?)
-            data = {db_field: None for db_field in self.schema.keys()}
-            data['link'] = url
-            data['source'] = source
+            # Initialize with None values for all database fields
+            data = {field: None for field in self.schema.keys()}
+            data["link"] = url
+            data["source"] = source
 
             # Loop through database fields and look for desired items
-            for db_field in self.schema.keys():
+            for field in self.schema.keys():
 
-                if db_field == "title":
-                    value = soup.find(db_field).text.strip() if soup.find(db_field) else None
-                    data[db_field] = value
+                if field == "title":
+                    tag = soup.find(field)
+                    if tag:
+                        data[field] = tag.text.strip()       
 
                 # Published date: search for <meta> tag with property
-                if db_field == "published":
-                    date = soup.find('meta', {'property': 'article:published_time'})
-                    if date and "content" in date.attrs:
-                        published = date['content']
-                        if published:
-                            try:
-                                published = parser.parse(published)
-                                data[db_field] = published
-                            except Exception as e:
-                                print(f"Error parsing date '{published}': {e}")
+                elif field == "published":
+                    tag = soup.find("meta", {"property": "article:published_time"})
+                    published = tag.get("content") if tag else None
+                    if published:
+                        try:
+                            data[field] = parser.parse(published)
+                        except Exception as e:
+                            print(f"Error parsing date '{published}': {e}")
 
-                if db_field == "content":
-                    raw = soup.find('article').text.strip() if soup.find('article') else None
-                    if raw:
-                        value = clean_raw_html(raw, feed='web') # Clean article text
-                        data[db_field] = value
+                elif field == "content":
+                    tag = soup.find("article")
+                    if tag:
+                        # Clean article text
+                        data[field] = clean_html(tag.text.strip(), feed="web")
 
-                if db_field == "summary":
+                elif field == "summary":
                     # Search for summary using description or OpenGraph attributes
-                    for x in [{"name": "description"}, {"property": "og:description"}]:
-                        tag = soup.find("meta", x)
+                    meta_tags = [
+                        {"name": "description"}, {"property": "og:description"}
+                        ]
+                    for meta in meta_tags:
+                        tag = soup.find("meta", meta)
                         if tag and "content" in tag.attrs:
-                            data[db_field] = tag['content']
+                            data[field] = tag["content"]
                             break  # Stop if a valid summary is found
 
-                if db_field == "tags":
-                    tags = soup.find("meta", {"name": "keywords"})
-                    if tags and "content" in tags.attrs:
-                        data[db_field] = tags['content']
+                elif field == "tags":
+                    tag = soup.find("meta", {"name": "keywords"})
+                    if tag:
+                        data[field] = tag.get("content")
 
-                if db_field == "hash":
+                elif field == "hash":
                     # Compute hash for deduplication
-                    hash = compute_hash(data['title'], data['source'])
-                    data[db_field] = hash
+                    data[field] = compute_hash(data.get("title"), data.get("source"))
 
             articles.append(data)
             
@@ -150,6 +150,6 @@ class WebScraper:
 
 
 if __name__ == "__main__":
-    targets = config.get_list("test_sites")
-    scraper = WebScraper(targets)
+    targets = config.get_list("rss_feeds")
+    scraper = WebScraper(convert_rss(targets))
     scraper.scrape()
