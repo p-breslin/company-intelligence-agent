@@ -1,4 +1,3 @@
-import time
 import asyncio
 import aiohttp
 import feedparser
@@ -7,7 +6,7 @@ from bs4 import BeautifulSoup
 from utils.config import config
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
-from utils.helpers import compute_hash, clean_html, store_to_postgres
+from utils.helpers import compute_hash, clean_html
 
 
 class ExtractData:
