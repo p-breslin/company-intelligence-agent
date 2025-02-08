@@ -1,14 +1,17 @@
 import re
 import html
 import hashlib
+import psycopg
 from bs4 import BeautifulSoup
+from operator import itemgetter
+from utils.config import config
 from urllib.parse import urlparse, urlunparse
 
 
 def compute_hash(title, url):
-    """ Hashes title + base domain to ensure consistency across RSS & scraping """
+    """Hashes title + base domain to ensure consistency across RSS & scraping."""
     base_domain = urlparse(url).netloc  # Extracts the domain
-    return hashlib.md5((title + base_domain).encode('utf-8')).hexdigest()
+    return hashlib.md5((title + base_domain).encode("utf-8")).hexdigest()
 
 
 def clean_html(raw_html, feed="rss"):
@@ -50,12 +53,52 @@ def convert_rss(rss_list):
             domain = domain.replace("feeds.", "", 1)
         
         # Reconstruct the URL with new components
-        website = urlunparse((parsed_url.scheme, domain, new_path, '', '', ''))
-        converted.append(website.rstrip('/')) # Remove trailing slashes
-        print(website.rstrip('/'))
+        website = urlunparse((parsed_url.scheme, domain, new_path, "", "", ""))
+        converted.append(website.rstrip("/")) # Remove trailing slashes
+        print(website.rstrip("/"))
 
     return converted
 
+
+def store_to_postgres(articles):
+    """
+    Inserts RSS articles into PostgreSQL database.
+    Prevents duplicate entries using the hash.
+    """
+    try:
+        conn = psycopg.connect(**config.get_section("DB_USER"))
+        with conn.cursor() as cur:
+            try:
+                # Get column names dynamically from schema
+                columns = list(config.get_section("schema").keys())
+                # Create placeholders for values
+                placeholders = ", ".join(["%s"] * len(columns))
+                # Join column names for SQL query
+                col_names = ", ".join(columns) 
+
+                # Construct dynamic INSERT statement 
+                insert_query = f"""
+                    INSERT INTO articles ({col_names})
+                    VALUES ({placeholders})
+                    ON CONFLICT (hash) DO NOTHING;
+                """
+
+                # Execute query dynamically
+                getter = itemgetter(*columns) # optimized getter for column order
+                values = [getter(a) for a in articles]
+                cur.executemany(insert_query, values)                    
+        
+            except Exception as e:
+                print(f"Error inserting article: {e}")
+        
+        conn.commit()
+        conn.close()
+        print("Data successfully stored in PostgreSQL table.")
+
+    except Exception as e:
+        print("Database connection failed:", e)
+
+        
 def token_count(text):
     """
     Estimates the token count based on word and character length.
