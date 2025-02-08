@@ -35,7 +35,7 @@
             "tags", 
             "model"
         ],
-        "target_data": [
+        "data": [
             "hash", 
             "content",
             "title", 
