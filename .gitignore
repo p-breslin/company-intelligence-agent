@@ -8,3 +8,5 @@ scripts/chroma_init.py
 src/backend/__pycache__/scraper.cpython-313.pyc
 src/rss.py
 src/scraper.py
+src/backend/__pycache__/async_rss_handler.cpython-313.pyc
+src/backend/__pycache__/async_web_scraper.cpython-313.pyc
