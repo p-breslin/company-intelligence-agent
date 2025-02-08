@@ -78,13 +78,24 @@ class WebScraper:
 
                 # Published date: search for <meta> tag with property
                 elif field == "published":
-                    tag = soup.find("meta", {"property": "article:published_time"})
-                    published = tag.get("content") if tag else None
-                    if published:
-                        try:
-                            data[field] = parser.parse(published)
-                        except Exception as e:
-                            print(f"Error parsing date '{published}': {e}")
+                    # Potential date selectors
+                    selectors = [
+                        {"property": "article:published_time"},
+                        {"property": "og:updated_time"},
+                        {"name": "date"},
+                        {"property": "publish_date"},
+                    ]
+                    for meta_tag in selectors:
+                        tag = soup.find("meta", meta_tag)
+                        if tag and tag.get("content"):
+                            published = tag["content"]
+                            try:
+                                # Parse the date into a proper format
+                                 data[field] = parser.parse(published)
+                                 break
+                            except Exception as e:
+                                print(f"Error parsing date '{published}': {e}")
+                            
 
                 elif field == "content":
                     tag = soup.find("article")
