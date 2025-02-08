@@ -46,7 +46,6 @@
     },
 
     "rss_feeds": [
-        "https://www.fierce-network.com/rss/Fierce%20Network%20Homepage/xml",
         "https://www.networkcomputing.com/rss.xml"
     ],
 
