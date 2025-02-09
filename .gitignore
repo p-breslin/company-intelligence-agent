@@ -1,12 +1,27 @@
-.DS_Store
-src/company_intelligence_agent.egg-info/
-src/utils/__pycache__/
-/rough_work
-scripts/postgres_init.py
-data
-scripts/chroma_init.py
-src/backend/__pycache__/scraper.cpython-313.pyc
-src/rss.py
-src/scraper.py
-src/backend/__pycache__/async_rss_handler.cpython-313.pyc
-src/backend/__pycache__/async_web_scraper.cpython-313.pyc
+# macOS system files  
+.DS_Store  
+
+# Python build and cache files  
+src/company_intelligence_agent.egg-info/  
+src/utils/__pycache__/  
+src/backend/__pycache__/  
+src/backend/__pycache__/*.pyc  
+
+# Ignoring specific Python scripts
+scripts/postgres_init.py  
+scripts/chroma_init.py  
+
+# Data and rough work directories  
+data/  
+rough_work/  
+
+# Node.js dependencies  
+node_modules/  
+
+# Build and Vite-related files  
+dist/  
+.vite/  
+*.cache  
+
+# Environment variables  
+.env  
