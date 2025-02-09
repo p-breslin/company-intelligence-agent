@@ -29,18 +29,18 @@
         "root": "./data/chroma/",
         "dbname": "database",
         "metadata": [
-            "title", 
-            "source", 
-            "published", 
-            "tags", 
+            "title",
+            "source",
+            "published",
+            "tags",
             "model"
         ],
         "data": [
-            "hash", 
+            "hash",
             "content",
-            "title", 
-            "source", 
-            "published", 
+            "title",
+            "source",
+            "published",
             "tags"
         ]
     },
