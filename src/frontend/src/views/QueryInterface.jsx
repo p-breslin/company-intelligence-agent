@@ -3,6 +3,8 @@ import QueryInput from "../components/QueryInput";
 import CategorySelection from "../components/CategorySelection";
 import ResultCard from "../components/ResultCard";
 import ChatHistory from "../components/ChatHistory";
+import { fetchResults } from "../services/api"; // Import API function
+
 
 export default function UserInterface() {
   const [query, setQuery] = useState("");
@@ -12,24 +14,39 @@ export default function UserInterface() {
   const [followUpQuery, setFollowUpQuery] = useState("");
   const [conversation, setConversation] = useState([]);
 
-  // Handles query submission and sets mock categories
+
+  // Step 1: Handle first search (only show categories)
   const handleQuerySubmit = async () => {
-    const mockCategories = ["Company Strategy", "Technology Stack", "Major Players"];
-    setCategories(mockCategories);
+    if (!query) return; // Prevent empty searches
+    setCategories(["Company Strategy", "Technology Stack", "Major Players"]); // Show categories
+    setSelectedCategory(null); // Reset selection
+    setResults([]); // Hide results initially
   };
 
-  // Handles category selection and sets mock results
+
+  // Step 2: Handle category selection (fetch actual results)
   const handleCategorySelect = async (category) => {
     setSelectedCategory(category);
-    setCategories([]); // Hide categories
-    setResults([
-      { id: 1, title: "Apple's AI Strategy", summary: "Apple is investing in AI..." },
-      { id: 2, title: "Apple's New Chip", summary: "The new M4 chip will..." },
-    ]);
+    setCategories([]); // Hide category selection
+  
+    const data = await fetchResults(query, category); // Fetch results from ChromaDB
+  
+    console.log("ChromaDB Results:", data.results); // Debugging
+  
+    setResults(data.results); // Show results
+    
+    // Add to conversation history only AFTER results are shown
+    if (data.results.length > 0) {
+      setConversation([...conversation, { question: query, response: `Filtered results for: ${category}` }]);
+    } else {
+      console.warn("No results found for this category!");
+    }
   };
 
-  // Handles follow-up queries and updates conversation
+  
+  // Step 3: Handle follow-up questions
   const handleFollowUp = async () => {
+    if (!followUpQuery) return;
     setConversation([
       ...conversation,
       { question: followUpQuery, response: "Here's a more detailed breakdown..." },
@@ -37,14 +54,21 @@ export default function UserInterface() {
     setFollowUpQuery(""); // Clear input
   };
 
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Company Intelligence Agent</h1>
+      
+      {/* Step 1: Enter search query */}
       <QueryInput query={query} setQuery={setQuery} onSubmit={handleQuerySubmit} />
+      
+      {/* Step 2: Select category */}
       {categories.length > 0 && (
         <CategorySelection categories={categories} onSelect={handleCategorySelect} />
       )}
-      {results.length > 0 && (
+
+      {/* Step 3: Show results after category selection */}
+      {selectedCategory && results.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold">Results</h2>
           {results.map((res) => (
@@ -52,12 +76,16 @@ export default function UserInterface() {
           ))}
         </div>
       )}
-      {results.length > 0 && (
+
+      {/* Step 4: Allow follow-up questions */}
+      {selectedCategory && results.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold">Ask more about the results</h2>
           <QueryInput query={followUpQuery} setQuery={setFollowUpQuery} onSubmit={handleFollowUp} />
         </div>
       )}
+
+      {/* Step 5: Show chat history */}
       {conversation.length > 0 && <ChatHistory conversation={conversation} />}
     </div>
   );
