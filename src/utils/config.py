@@ -6,7 +6,8 @@ import json
 class ConfigLoader:
     def __init__(self):
         # Determine config path
-        self.config_path = os.getenv("DB_CONFIG_PATH", "configs/config.json")
+        self.root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+        self.config_path = os.getenv("DB_CONFIG_PATH", os.path.join(self.root, "configs/config.json"))
 
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
@@ -19,7 +20,13 @@ class ConfigLoader:
         """Returns a dictionary of the specified section."""
         if section not in self.config:
             raise KeyError(f"Section [{section}] not found in config file")
-        return dict(self.config[section])
+        section_data = dict(self.config[section])
+
+        # If accessing the ChromaDB section, resolve the path dynamically
+        if section == "chroma" and "root" in section_data:
+            section_data["root"] = os.path.abspath(os.path.join(self.root, section_data["root"]))
+
+        return section_data
 
     def get(self, section, key):
         """Returns a single value from the specified section."""

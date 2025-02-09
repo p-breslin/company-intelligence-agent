@@ -8,6 +8,8 @@ class ChromaDBViewer:
         self.collection = client.get_or_create_collection(name=chroma["dbname"])
         self.data = self.collection.get(limit=limit)
 
+        print(f"ChromaDB Root Path: {chroma['root']}")
+
 
     def list_collections(self):
         """Gets a list for all stored collections."""
