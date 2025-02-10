@@ -1,3 +1,37 @@
+/**
+ * QueryInterface Component
+ * ------------------------
+ * The main interface for interacting with the Company Intelligence Agent.
+ * It allows users to:
+ * - Enter a search query.
+ * - Select a category to refine the search.
+ * - View the search results.
+ * - Ask follow-up questions.
+ * - See their conversation history.
+ *
+ * State Variables:
+ * - query (string): Stores the user's search input.
+ * - categories (array): Holds available categories from the config.
+ * - selectedCategory (string | null): Tracks the currently selected category.
+ * - results (array): Stores search results fetched from the API.
+ * - followUpQuery (string): Stores user input for follow-up questions.
+ * - conversation (array): Maintains the chat history of queries and responses.
+ *
+ * Functions:
+ * - handleQuerySubmit: Loads categories based on the query.
+ * - handleCategorySelect: Fetches + displays results for the selected category.
+ * - handleFollowUp: Allows follow-up questions on displayed results.
+ *
+ * Usage:
+ * <QueryInterface />
+ *
+ * Dependencies:
+ * - Uses React's useState for state management.
+ * - UI components (QueryInput, CategorySelection, ResultCard, ChatHistory).
+ * - Fetches results from the FastAPI service.
+ * - Reads categories from a frontend configuration file.
+ */
+
 import { useState } from "react";
 import QueryInput from "../components/QueryInput";
 import CategorySelection from "../components/CategorySelection";
@@ -11,13 +45,7 @@ import frontendConfig from "@configs/frontendConfig.json";
 // console.log("Categories:", frontendConfig.categories);
 
 export default function QueryInterface() {
-  // State Variables to store the:
-  //  – user's input in the search field
-  //  – categories for filtering search results
-  //  – currently selected category
-  //  – search results based on the user's query and selected category
-  //  – follow-up queries
-  //  – the conversation history
+  // State Variables
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -32,7 +60,7 @@ export default function QueryInterface() {
     // Fetches categories as defined in the config file
     setCategories(frontendConfig.categories); // Shows categories
     setSelectedCategory(null); // Resets selection
-    setResults([]); // Clears the previous results
+    setResults([]); // Clears previous results
   };
 
   // Step 2: Handle category selection and fetch the results
