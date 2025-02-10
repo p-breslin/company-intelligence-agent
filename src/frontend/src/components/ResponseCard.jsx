@@ -15,6 +15,9 @@
  * - Adds a shadow for a card-like appearance.
  */
 
+import React from "react";
+import ReactMarkdown from "react-markdown";
+
 export default function ResponseCard({ title, summary }) {
   return (
     <div className="border p-4 rounded shadow-md mb-4">
@@ -22,7 +25,7 @@ export default function ResponseCard({ title, summary }) {
       <h3 className="font-bold text-lg">{title}</h3>
 
       {/* Display LLM response sumamry */}
-      <p className="text-gray-600">{summary}</p>
+      <ReactMarkdown className="text-gray-600">{summary}</ReactMarkdown>
     </div>
   );
 }
