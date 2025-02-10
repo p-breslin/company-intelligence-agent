@@ -21,17 +21,19 @@ class LocalLLM:
         )
         return splitter.split_text(text)
 
-    def generate_response(self, text, prompt_key, multi_turn=False):
+    def generate_response(self, user_query, retrieved_text, multi_turn=False):
         """
         Uses the Local LLM to generate either a:
             - Single response from one turn conversation.
             - Many responses with context using a multi-turn conversation.
+            - The user query and the retrieved content is input to the LLM.
+            - Output of LLM is a generated refined response.
         """
-        prompt = f"{self.prompts[prompt_key]}\n{text}"
+        input = f"User Query: {user_query}\n\nRetrieved Content:\n{retrieved_text}"
 
         # Step 1: Handle Chunking (if needed)
-        if token_count(text) > self.chunking["limit"]:
-            chunks = self.chunk_text(text)
+        if token_count(input) > self.chunking["limit"]:
+            chunks = self.chunk_text(input)
             chunked_responses = []
 
             if multi_turn:
@@ -53,14 +55,13 @@ class LocalLLM:
                     return output
 
                 except Exception as e:
-                    return f"LLM Error: {str(e)}"  # Return error message if LLM fails
+                    return f"LLM Error: {str(e)}"
 
             else:
                 # Process each chunk independently in single-turn mode
                 for chunk in chunks:
-                    chunk_prompt = f"{self.prompts[prompt_key]}\n{chunk}"
                     try:
-                        response = ollama.generate(model=self.llm, prompt=chunk_prompt)
+                        response = ollama.generate(model=self.llm, prompt=chunk)
                         chunked_responses.append(response["response"].strip())
                     except Exception as e:
                         chunked_responses.append(f"LLM Error on chunk: {str(e)}")
@@ -77,7 +78,7 @@ class LocalLLM:
         # Step 2: No Chunking Required: Single-Turn or Multi-Turn Processing
         try:
             if multi_turn:
-                self.conversation_history.append({"role": "user", "content": prompt})
+                self.conversation_history.append({"role": "user", "content": input})
 
                 # Trim conversation history if it exceeds the limit
                 # Each exchange has 2 messages (one from user, one from agent)
@@ -97,7 +98,7 @@ class LocalLLM:
 
             else:
                 # Single-turn mode does not maintain conversation history
-                response = ollama.generate(model=self.llm, prompt=prompt)
+                response = ollama.generate(model=self.llm, prompt=input)
                 output = response["response"].strip()
 
             return output
@@ -108,4 +109,3 @@ class LocalLLM:
 
 if __name__ == "__main__":
     llm = LocalLLM()
-    articles = load_postgres_data()
