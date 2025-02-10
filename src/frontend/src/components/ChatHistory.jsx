@@ -17,6 +17,9 @@
  * - Applies spacing and borders for better readability.
  */
 
+import React from "react";
+import ReactMarkdown from "react-markdown";
+
 export default function ChatHistory({ conversation }) {
   // Prevents rendering an empty component when no data is available
   if (!conversation || conversation.length === 0) {
@@ -45,20 +48,37 @@ export default function ChatHistory({ conversation }) {
             {/* Handle both query and follow-up questions */}
             {entry.query && (
               <p className="font-medium text-blue-800">
-                <span className="font-bold">You:</span> {entry.query}
+                <span className="font-bold">Question:</span> {entry.query}
               </p>
             )}
             {entry.question && (
               <p className="font-medium text-blue-800">
-                <span className="font-bold">You:</span> {entry.question}
+                <span className="font-bold">Follow-up Question:</span>{" "}
+                {entry.question}
               </p>
             )}
-
-            {/* Agent's response */}
+            {/* Agent's response (with markdown formatting) */}
             {entry.response && (
-              <p className="text-gray-600">
-                <span className="font-bold">Agent:</span> {entry.response}
-              </p>
+              <div className="text-gray-600 mt-2">
+                <span className="font-medium text-red-800 underline">
+                  Agent's Response:
+                </span>
+                <ReactMarkdown
+                  className="mt-1"
+                  components={{
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-5">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="ml-4">{children}</li>,
+                  }}
+                >
+                  {entry.response}
+                </ReactMarkdown>
+              </div>
             )}
           </div>
         ))}
