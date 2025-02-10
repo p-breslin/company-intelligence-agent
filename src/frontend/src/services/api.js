@@ -29,12 +29,15 @@ export async function fetchResults(query, category = "") {
     // Check for a successful response (HTTP status 200-299)
     if (!response.ok) throw new Error("Failed to fetch results");
 
-    // Parse and return JSON response
-    return await response.json();
+    // Parse JSON response
+    const data = await response.json();
+
+    // Return only the LLM-generated response
+    return { llm_response: data.llm_response };
   } catch (error) {
     console.error("Error fetching results:", error);
 
-    // Return an empty results object in case of failure
-    return { results: [] };
+    // Return an error message if fetching fails
+    return { llm_response: "Error retrieving information. Please try again." };
   }
 }
