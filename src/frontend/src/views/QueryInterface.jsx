@@ -13,7 +13,7 @@
  * - query (string): Stores the user's search input.
  * - categories (array): Holds available categories from the config.
  * - selectedCategory (string | null): Tracks the currently selected category.
- * - results (array): Stores search results fetched from the API.
+ * - results (array): Stores search results fetched from API (LLM-gen response).
  * - followUpQuery (string): Stores user input for follow-up questions.
  * - conversation (array): Maintains the chat history of queries and responses.
  *
@@ -33,11 +33,11 @@
  */
 
 import { useState } from "react";
+import { fetchResults } from "../services/api"; // API function
 import QueryInput from "../components/QueryInput";
 import CategorySelection from "../components/CategorySelection";
-import ResultCard from "../components/ResultCard";
+import ResponseCard from "../components/ResponseCard";
 import ChatHistory from "../components/ChatHistory";
-import { fetchResults } from "../services/api"; // API function
 import frontendConfig from "@configs/frontendConfig.json";
 
 // Debugging logs to verify loaded configuration
@@ -49,9 +49,10 @@ export default function QueryInterface() {
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [results, setResults] = useState([]);
+  const [LLMResponse, setLLMResponse] = useState("");
   const [followUpQuery, setFollowUpQuery] = useState("");
   const [conversation, setConversation] = useState([]);
+  const [loading, setLoading] = useState(false); // loading state
 
   // Step 1: Handle intial query and its submission
   const handleQuerySubmit = async () => {
@@ -60,7 +61,8 @@ export default function QueryInterface() {
     // Fetches categories as defined in the config file
     setCategories(frontendConfig.categories); // Shows categories
     setSelectedCategory(null); // Resets selection
-    setResults([]); // Clears previous results
+    setLLMResponse(""); // Clears previous results
+    setLoading(true); // Set loading state to true before API call
   };
 
   // Step 2: Handle category selection and fetch the results
@@ -72,20 +74,21 @@ export default function QueryInterface() {
       // Fetch ChromaDB results from API based on query and category
       const fetchedResults = await fetchResults(query, category);
 
-      // Update results state with retrieved data
-      setResults(fetchedResults.results);
+      // Update LLM response state with retrieved data, ensure Response is a str
+      const responseText =
+        fetchedResults.llm_response || "No response available.";
+      setLLMResponse(responseText);
 
-      // Add the query and results to conversation history
-      if (fetchedResults.results.length > 0) {
-        setConversation([
-          ...conversation,
-          { query, category, results: fetchedResults },
-        ]);
-      } else {
-        console.warn("No results found for this category.");
-      }
+      // Add the query and response to conversation history
+      setConversation([
+        ...conversation,
+        { query, category, response: responseText },
+      ]);
     } catch (error) {
-      console.error("Error fetching results:", error);
+      console.error("Error fetching LLM response:", error);
+      setLlmResponse("Error retrieving response. Please try again.");
+    } finally {
+      setLoading(false); // Reset loading state after API call finishes
     }
   };
 
@@ -98,7 +101,7 @@ export default function QueryInterface() {
       ...conversation,
       {
         question: followUpQuery,
-        response: "Here's a more detailed breakdown...",
+        response: "Processing follow-up response...",
       },
     ]);
     setFollowUpQuery(""); // Clear input after submission
@@ -108,14 +111,14 @@ export default function QueryInterface() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Company Intelligence Agent</h1>
 
-      {/* Step 1: Make a query to the search input field */}
+      {/* Step 1: Make a query */}
       <QueryInput
         query={query}
         setQuery={setQuery}
         onSubmit={handleQuerySubmit}
       />
 
-      {/* Step 2: Select category from category selection */}
+      {/* Step 2: Select category from selection */}
       {categories.length > 0 && (
         <CategorySelection
           categories={categories}
@@ -123,20 +126,27 @@ export default function QueryInterface() {
         />
       )}
 
-      {/* Step 3: Show results after category selection */}
-      {selectedCategory && results.length > 0 && (
+      {/* Step 3: Show LLM response */}
+      {selectedCategory && (
         <div className="mt-6">
-          <h2 className="text-lg font-semibold">Results</h2>
-          {results.map((res) => (
-            <ResultCard key={res.id} title={res.title} summary={res.summary} />
-          ))}
+          <h2 className="text-lg font-semibold">LLM Response</h2>
+
+          {loading ? (
+            <div className="border p-4 rounded shadow-md bg-gray-100 text-gray-600">
+              Loading...
+            </div>
+          ) : (
+            LLMResponse && (
+              <ResponseCard title="Refined Response" summary={LLMResponse} />
+            )
+          )}
         </div>
       )}
 
       {/* Step 4: Allow follow-up questions */}
-      {selectedCategory && results.length > 0 && (
+      {selectedCategory && LLMResponse && (
         <div className="mt-6">
-          <h2 className="text-lg font-semibold">Ask more about the results</h2>
+          <h2 className="text-lg font-semibold">Ask More About the Results</h2>
           <QueryInput
             query={followUpQuery}
             setQuery={setFollowUpQuery}
