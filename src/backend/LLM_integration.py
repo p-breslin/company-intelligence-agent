@@ -24,11 +24,11 @@ class LocalLLM:
         self, user_query, retrieved_text, prompt="concise", multi_turn=False
     ):
         """
-        Uses the Local LLM to generate either a:
-            - Single response from one turn conversation.
-            - Many responses with context using a multi-turn conversation.
-            - The user query and the retrieved content is input to the LLM.
-            - Output of LLM is a generated refined response.
+        - Uses the Local LLM to generate either a:
+            > Single response from one turn conversation.
+            > Many responses with context using a multi-turn conversation.
+        - The user query and the retrieved content is input to the LLM.
+        - The Output of LLM is a generated refined response.
         """
         # Select prompt type
         prompt_template = self.prompts[prompt]
@@ -38,7 +38,7 @@ class LocalLLM:
             user_query=user_query, retrieved_text=retrieved_text
         )
 
-        # Step 1: Handle Chunking (if needed)
+        # 1: Handle Chunking (if needed)
         if token_count(input) > self.chunking["limit"]:
             chunks = self.chunk_text(input)
             chunked_responses = []
@@ -82,7 +82,7 @@ class LocalLLM:
                 except Exception as e:
                     return f"LLM Summarization Error: {str(e)}"
 
-        # Step 2: No Chunking Required: Single-Turn or Multi-Turn Processing
+        # 2: No Chunking Required: Single-Turn or Multi-Turn Processing
         try:
             if multi_turn:
                 self.conversation_history.append({"role": "user", "content": input})
