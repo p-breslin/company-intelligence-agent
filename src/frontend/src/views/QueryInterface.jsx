@@ -13,7 +13,8 @@
  * - query (string): Stores the user's search input.
  * - categories (array): Holds available categories from the config.
  * - selectedCategory (string | null): Tracks the currently selected category.
- * - results (array): Stores search results fetched from API (LLM-gen response).
+ * - LLM response (string): Generated LLM response
+ * - data (dict): full content and metadata fetched from ChrombaDB
  * - followUpQuery (string): Stores user input for follow-up questions.
  * - conversation (array): Maintains the chat history of queries and responses.
  *
@@ -50,9 +51,10 @@ export default function QueryInterface() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [LLMResponse, setLLMResponse] = useState("");
+  const [data, setData] = useState([]);
   const [followUpQuery, setFollowUpQuery] = useState("");
   const [conversation, setConversation] = useState([]);
-  const [loading, setLoading] = useState(false); // loading state
+  const [loading, setLoading] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
 
   // Step 1: Handle intial query and its submission
@@ -62,7 +64,8 @@ export default function QueryInterface() {
     // Fetches categories as defined in the config file
     setCategories(frontendConfig.categories); // Shows categories
     setSelectedCategory(null); // Resets selection
-    setLLMResponse(""); // Clears previous results
+    setLLMResponse(""); // Clears previous LLM response
+    setData([]); // Clear previous data
     setLoading(true); // Set loading state to true before API call
   };
 
@@ -70,24 +73,34 @@ export default function QueryInterface() {
   const handleCategorySelect = async (category) => {
     setSelectedCategory(category); // Uses chosen category
     setCategories([]); // Hides category selection
+    setLoading(true);
 
     try {
       // Fetch ChromaDB results from API based on query and category
       const fetchedResults = await fetchResults(query, category);
 
-      // Update LLM response state with retrieved data, ensure Response is a str
-      const responseText =
-        fetchedResults.llm_response || "No response available.";
-      setLLMResponse(responseText);
+      // Ensure fetchedResults.results is valid
+      if (
+        Array.isArray(fetchedResults.results) &&
+        fetchedResults.results.length > 0
+      ) {
+        setData(fetchedResults.results);
+      } else {
+        console.warn("Unexpected results structure:", fetchedResults.results);
+        setData([]); // Prevents UI errors
+      }
+
+      // Add the LLM generated response
+      setLLMResponse(fetchedResults.llm_response || "No response available.");
 
       // Add the query and response to conversation history
       setConversation([
         ...conversation,
-        { query, category, response: responseText },
+        { query, category, response: fetchedResults.llm_response },
       ]);
     } catch (error) {
       console.error("Error fetching LLM response:", error);
-      setLlmResponse("Error retrieving response. Please try again.");
+      setLLMResponse("Error retrieving response. Please try again.");
     } finally {
       setLoading(false); // Reset loading state after API call finishes
     }
@@ -137,9 +150,10 @@ export default function QueryInterface() {
               Loading...
             </div>
           ) : (
-            LLMResponse && (
-              <ResponseCard title="Refined Response" summary={LLMResponse} />
-            )
+            <ResponseCard
+              title={data?.[0]?.title || "No Title Available"}
+              summary={LLMResponse || "No response available."}
+            />
           )}
         </div>
       )}

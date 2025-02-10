@@ -31,13 +31,16 @@ export async function fetchResults(query, category = "") {
 
     // Parse JSON response
     const data = await response.json();
+    console.log("API Response:", data);
 
-    // Return only the LLM-generated response
-    return { llm_response: data.llm_response };
+    return data;
   } catch (error) {
     console.error("Error fetching results:", error);
-
-    // Return an error message if fetching fails
-    return { llm_response: "Error retrieving information. Please try again." };
+    return {
+      q: [],
+      cateogory: [],
+      results: [],
+      llm_response: "Error retrieving information. Please try again.",
+    };
   }
 }
