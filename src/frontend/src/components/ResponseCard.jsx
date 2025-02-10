@@ -24,8 +24,20 @@ export default function ResponseCard({ title, summary }) {
       {/* Display title of response */}
       <h3 className="font-bold text-lg">{title}</h3>
 
-      {/* Display LLM response sumamry */}
-      <ReactMarkdown className="text-gray-600">{summary}</ReactMarkdown>
+      {/* Display LLM response sumamry (formatted with markdown) */}
+      <ReactMarkdown
+        className="text-gray-600"
+        components={{
+          p: ({ children }) => <p className="mb-2">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-5">{children}</ul>,
+          ol: ({ children }) => (
+            <ol className="list-decimal pl-5">{children}</ol>
+          ),
+          li: ({ children }) => <li className="ml-4">{children}</li>,
+        }}
+      >
+        {summary}
+      </ReactMarkdown>
     </div>
   );
 }
