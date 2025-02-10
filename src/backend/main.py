@@ -70,7 +70,7 @@ async def search(q: str = Query(..., description="Search query"), category: str 
     try:
         results = collection.query(
             query_texts=[q],
-            n_results=3,  # Retrieve top 3 most relevant results
+            n_results=1,  # Retrieve top 3 most relevant results
             include=["documents", "metadatas"],
         )
     except Exception as e:
@@ -78,13 +78,11 @@ async def search(q: str = Query(..., description="Search query"), category: str 
         return {"error": "Failed to retrieve search results"}
 
     # Step 2: Extract relevant content from ChromaDB results
-    # Double for-loop flattens nested structure into a simple list of strings
-    retrieved_texts = [
-        doc for sublist in results.get("documents", []) for doc in sublist
-    ]
+    docs = results.get("documents", [])
+    metadatas = results.get("metadatas", [])
 
     # Ensure we have retrieved content, otherwise return an empty response
-    if not retrieved_texts:
+    if not docs:
         return {
             "query": q,
             "category": category,
@@ -92,17 +90,30 @@ async def search(q: str = Query(..., description="Search query"), category: str 
             "llm_response": "No relevant data found.",
         }
 
-    # Concatenate retrieved texts for LLM input
-    retrieved_content = "\n".join(retrieved_texts)
+    # Concatenate retrieved texts for LLM input (flatten doc lists into one str)
+    retrieved_text = "\n".join(
+        doc if isinstance(doc, str) else " ".join(doc) for doc in docs
+    )
 
     # Step 3: Generate refined response using Local LLM
-    llm_response = LLM.generate_response(q, retrieved_content, multi_turn=False)
+    llm_response = LLM.generate_response(q, retrieved_text, multi_turn=False)
 
-    # Step 4: Format and return response
+    # Step 4: Format and return all results
+    # results["metadatas"]: list of lists; each list contains metadata dict.
+    # results["documents"]: list of strings (the actual retrieved content).
     formatted_results = [
-        {"title": metadata.get("title", "Unknown Title"), "summary": doc}
-        for doc, metadata_list in zip(results["documents"], results["metadatas"])
-        for metadata in metadata_list
+        {
+            # Ensure article is a string
+            "article": " ".join(doc) if isinstance(doc, list) else doc,
+            "title": metadata.get("title", "Unknown Title"),
+            "published": metadata.get("published", "Unknown Date"),
+            "source": metadata.get("source", "Unknown Source"),
+            "tags": metadata.get("tags", "No Tags Available"),
+        }
+        for doc, metadata_list in zip(docs, metadatas)
+        for metadata in (
+            metadata_list if isinstance(metadata_list, list) and metadata_list else [{}]
+        )
     ]
 
     return {
