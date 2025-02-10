@@ -1,7 +1,6 @@
 import ollama
-from collections import Counter
 from utils.config import config
-from utils.helpers import token_count, load_postgres_data
+from utils.helpers import token_count
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
@@ -21,7 +20,9 @@ class LocalLLM:
         )
         return splitter.split_text(text)
 
-    def generate_response(self, user_query, retrieved_text, multi_turn=False):
+    def generate_response(
+        self, user_query, retrieved_text, structured=False, multi_turn=False
+    ):
         """
         Uses the Local LLM to generate either a:
             - Single response from one turn conversation.
@@ -29,7 +30,15 @@ class LocalLLM:
             - The user query and the retrieved content is input to the LLM.
             - Output of LLM is a generated refined response.
         """
-        input = f"User Query: {user_query}\n\nRetrieved Content:\n{retrieved_text}"
+        # Select prompt type
+        prompt_template = (
+            self.prompts["structured"] if structured else self.prompts["default"]
+        )
+
+        # Format the prompt with user query and retrieved text
+        input = prompt_template.format(
+            user_query=user_query, retrieved_text=retrieved_text
+        )
 
         # Step 1: Handle Chunking (if needed)
         if token_count(input) > self.chunking["limit"]:
