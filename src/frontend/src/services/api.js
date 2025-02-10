@@ -23,7 +23,7 @@ export async function fetchResults(query, category = "") {
   try {
     // Construct the API request URL
     const response = await fetch(
-      `${API_URL}/search?q=${query}&category=${category}`
+      `${API_URL}/search_engine?q=${query}&category=${category}`
     );
 
     // Check for a successful response (HTTP status 200-299)
