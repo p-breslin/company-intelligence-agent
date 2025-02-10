@@ -18,6 +18,7 @@
  */
 
 export default function ChatHistory({ conversation }) {
+  // Prevents rendering an empty component when no data is available
   if (!conversation || conversation.length === 0) {
     return (
       <div className="mt-6">
@@ -38,6 +39,7 @@ export default function ChatHistory({ conversation }) {
           <div
             key={index}
             className="p-4 border rounded bg-gray-50"
+            // Add aria-label for better screen reader support
             aria-label={`Conversation entry ${index + 1}`}
           >
             {/* Handle both query and follow-up questions */}
