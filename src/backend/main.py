@@ -96,7 +96,9 @@ async def search(q: str = Query(..., description="Search query"), category: str 
     )
 
     # Step 3: Generate refined response using Local LLM
-    llm_response = LLM.generate_response(q, retrieved_text, multi_turn=False)
+    llm_response = LLM.generate_response(
+        q, retrieved_text, prompt="concise", multi_turn=False
+    )
 
     # Step 4: Format and return all results
     # results["metadatas"]: list of lists; each list contains metadata dict.

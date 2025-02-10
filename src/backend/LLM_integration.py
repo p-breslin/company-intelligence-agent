@@ -21,7 +21,7 @@ class LocalLLM:
         return splitter.split_text(text)
 
     def generate_response(
-        self, user_query, retrieved_text, structured=False, multi_turn=False
+        self, user_query, retrieved_text, prompt="concise", multi_turn=False
     ):
         """
         Uses the Local LLM to generate either a:
@@ -31,9 +31,7 @@ class LocalLLM:
             - Output of LLM is a generated refined response.
         """
         # Select prompt type
-        prompt_template = (
-            self.prompts["structured"] if structured else self.prompts["default"]
-        )
+        prompt_template = self.prompts[prompt]
 
         # Format the prompt with user query and retrieved text
         input = prompt_template.format(
