@@ -53,6 +53,7 @@ export default function QueryInterface() {
   const [followUpQuery, setFollowUpQuery] = useState("");
   const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(false); // loading state
+  const [showConversation, setShowConversation] = useState(false);
 
   // Step 1: Handle intial query and its submission
   const handleQuerySubmit = async () => {
@@ -155,8 +156,23 @@ export default function QueryInterface() {
         </div>
       )}
 
-      {/* Step 5: Show the chat history */}
-      {conversation.length > 0 && <ChatHistory conversation={conversation} />}
+      {/* Step 5: Toggle conversation history */}
+      <div className="mt-6">
+        <button
+          onClick={() => setShowConversation(!showConversation)} // Toggle visibility
+          className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600"
+        >
+          {showConversation
+            ? "Hide Conversation History"
+            : "Show Conversation History"}
+        </button>
+
+        {showConversation && conversation.length > 0 && (
+          <div className="mt-4">
+            <ChatHistory conversation={conversation} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
