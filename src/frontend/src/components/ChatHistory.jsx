@@ -62,7 +62,7 @@ export default function ChatHistory({ conversation }) {
               {/* LLM Response */}
               {entry.response && (
                 <div className="text-gray-600 mt-2">
-                  <span className="font-medium text-red-800 underline">
+                  <span className="font-bold text-red-700 underline">
                     Agent's Response:
                   </span>
                   <ReactMarkdown
@@ -87,16 +87,33 @@ export default function ChatHistory({ conversation }) {
 
               {/* Nested Follow-Ups */}
               {entry.followUps && entry.followUps.length > 0 && (
-                <div className="mt-3 pl-5 border-l-2 border-gray-300">
-                  <h4 className="text-md font-bold text-green-800 underline">
+                <div className="mt-4 pl-6 border-l-4 border-blue-500 bg-gray-100 p-3 rounded-md">
+                  <h4 className="text-lg font-bold text-green-800 underline">
                     Follow-ups:
                   </h4>
                   {entry.followUps.map((followUp, i) => (
                     <div key={i} className="mt-2">
                       <p className="font-medium text-blue-800">
+                        <span className="font-bold">Query:</span>{" "}
                         {followUp.query}
                       </p>
-                      <ReactMarkdown className="text-gray-600">
+                      <ReactMarkdown
+                        className="text-gray-700 mt-1"
+                        components={{
+                          p: ({ children }) => (
+                            <p className="mb-2">{children}</p>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc pl-5">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal pl-5">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="ml-4">{children}</li>
+                          ),
+                        }}
+                      >
                         {followUp.response}
                       </ReactMarkdown>
                     </div>
