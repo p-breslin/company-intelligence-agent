@@ -41,10 +41,6 @@ import ResponseCard from "../components/ResponseCard";
 import ChatHistory from "../components/ChatHistory";
 import frontendConfig from "@configs/frontendConfig.json";
 
-// Debugging logs to verify loaded configuration
-// console.log("frontendConfig", frontendConfig);
-// console.log("Categories:", frontendConfig.categories);
-
 export default function QueryInterface() {
   // State Variables
   const [query, setQuery] = useState("");
@@ -56,6 +52,7 @@ export default function QueryInterface() {
   const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
+  const [sessionID, setSessionID] = useState(null); // Tracks chat session
 
   // Step 1: Handle intial query and its submission
   const handleQuerySubmit = async () => {
@@ -66,59 +63,124 @@ export default function QueryInterface() {
     setSelectedCategory(null); // Resets selection
     setLLMResponse(""); // Clears previous LLM response
     setData([]); // Clear previous data
-    setLoading(true); // Set loading state to true before API call
+    setLoading(false); // wait until category slection before fetching data
+
+    const newSessionID = crypto.randomUUID();
+    setSessionID(newSessionID);
+
+    // Start a new conversation block
+    setConversation((prevConversation) => [
+      ...prevConversation,
+      {
+        session_id: newSessionID,
+        query,
+        response: "Waiting for response...",
+        followUps: [],
+      },
+    ]);
   };
 
   // Step 2: Handle category selection and fetch the results
   const handleCategorySelect = async (category) => {
+    if (!query) return; // Prevents making requests before query is set
+
     setSelectedCategory(category); // Uses chosen category
     setCategories([]); // Hides category selection
     setLoading(true);
 
     try {
-      // Fetch ChromaDB results from API based on query and category
-      const fetchedResults = await fetchResults(query, category);
+      const fetchedResults = await fetchResults(query, category, sessionID);
 
-      // Ensure fetchedResults.results is valid
-      if (
-        Array.isArray(fetchedResults.results) &&
-        fetchedResults.results.length > 0
-      ) {
-        setData(fetchedResults.results);
-      } else {
-        console.warn("Unexpected results structure:", fetchedResults.results);
-        setData([]); // Prevents UI errors
-      }
-
-      // Add the LLM generated response
+      setData(fetchedResults.results);
       setLLMResponse(fetchedResults.llm_response || "No response available.");
 
-      // Add the query and response to conversation history
-      setConversation([
-        ...conversation,
-        { query, category, response: fetchedResults.llm_response },
-      ]);
+      // Update conversation block with LLM response
+      setConversation((prevConversation) =>
+        prevConversation.map((entry) =>
+          entry.session_id === sessionID
+            ? { ...entry, response: fetchedResults.llm_response }
+            : entry
+        )
+      );
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setLLMResponse("Error retrieving response. Please try again.");
     } finally {
-      setLoading(false); // Reset loading state after API call finishes
+      setLoading(false);
     }
   };
 
   // Step 3: Handle follow-up questions for the fetched results
   const handleFollowUp = async () => {
-    if (!followUpQuery) return; // Prevent empty follow-ups
+    if (!followUpQuery || !sessionID) return;
 
-    // Add follow-up question and placeholder response to conversation history
-    setConversation([
-      ...conversation,
-      {
-        question: followUpQuery,
-        response: "Processing follow-up response...",
-      },
-    ]);
-    setFollowUpQuery(""); // Clear input after submission
+    // Add follow-up placeholder response
+    setConversation((prevConversation) =>
+      prevConversation.map((entry) =>
+        entry.session_id === sessionID
+          ? {
+              ...entry,
+              followUps: [
+                ...(entry.followUps || []),
+                {
+                  query: followUpQuery,
+                  response: "Processing follow-up response...",
+                },
+              ],
+            }
+          : entry
+      )
+    );
+    setFollowUpQuery("");
+
+    try {
+      const followUpResults = await fetchResults(
+        followUpQuery,
+        null,
+        sessionID
+      );
+
+      // Update the follow-up response inside the correct conversation block
+      setConversation((prevConversation) =>
+        prevConversation.map((entry) =>
+          entry.session_id === sessionID
+            ? {
+                ...entry,
+                followUps: entry.followUps.map((followUp) =>
+                  followUp.response === "Processing follow-up response..."
+                    ? { ...followUp, response: followUpResults.llm_response }
+                    : followUp
+                ),
+              }
+            : entry
+        )
+      );
+
+      // Update LLM response box with latest response
+      setLLMResponse(followUpResults.llm_response || "No response available.");
+    } catch (error) {
+      console.error("Error fetching follow-up response:", error);
+
+      // Update follow-up placeholder with error message
+      setConversation((prevConversation) =>
+        prevConversation.map((entry) =>
+          entry.session_id === sessionID
+            ? {
+                ...entry,
+                followUps: entry.followUps.map((followUp) =>
+                  followUp.response === "Processing follow-up response..."
+                    ? {
+                        ...followUp,
+                        response:
+                          "Error retrieving response. Please try again.",
+                      }
+                    : followUp
+                ),
+              }
+            : entry
+        )
+      );
+    }
   };
 
   return (

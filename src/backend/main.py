@@ -36,67 +36,95 @@ class CIA:
             print(f"ChromaDB Initialization Failed: {e}")
             self.collection = None
 
-    def search_engine(self, query: str, category: str = None):
-        """Handles the query, retrieves documents, refines with LLM, and caches responses."""
+    def engine(self, query: str, category: str = None, session_id: str = None):
+        """Handles queries, info retrieval, LLM refinement, follow-ups."""
 
-        # Similarity search on ChromaDB embeddings
-        try:
-            print(f"Query: '{query}', Category: '{category}'")
-            results = self.collection.query(
-                query_texts=[query], n_results=1, include=["documents", "metadatas"]
+        # Identify if new session or following up a previous session
+        follow_up = session_id in self.cache
+
+        if not follow_up:
+            # Similarity search on ChromaDB embeddings
+            try:
+                print(f"Query: '{query}', Category: '{category}'")
+                results = self.collection.query(
+                    query_texts=[query], n_results=1, include=["documents", "metadatas"]
+                )
+            except Exception as e:
+                print(f"Error querying ChromaDB: {e}")
+                return {"error": "Failed to retrieve search results"}
+
+            # Extract relevant content from retrieved information
+            docs = results.get("documents", [])
+            metadatas = results.get("metadatas", [])
+
+            # Ensure we have retrieved content
+            if not docs:
+                return {
+                    "query": query,
+                    "category": category,
+                    "results": [],
+                    "llm_response": "No relevant data found.",
+                }
+
+            # Formatting retrieved information for the output
+            retrieved_information = [
+                {
+                    # Ensure article is a string
+                    "article": " ".join(doc) if isinstance(doc, list) else doc,
+                    "title": metadata.get("title", "Unknown Title"),
+                    "published": metadata.get("published", "Unknown Date"),
+                    "source": metadata.get("source", "Unknown Source"),
+                    "tags": metadata.get("tags", "No Tags Available"),
+                }
+                # results["documents"]: list of strings
+                for doc, metadata_list in zip(docs, metadatas)
+                # results["metadatas"]: list of lists; each list has metadata dict
+                for metadata in (
+                    metadata_list
+                    if isinstance(metadata_list, list) and metadata_list
+                    else [{}]
+                )
+            ]
+
+            # Combine  texts for LLM input (flatten doc lists into one str)
+            retrieved_text = "\n".join(
+                doc if isinstance(doc, str) else " ".join(doc) for doc in docs
             )
-        except Exception as e:
-            print(f"Error querying ChromaDB: {e}")
-            return {"error": "Failed to retrieve search results"}
-
-        # Extract relevant content from retrieved information
-        docs = results.get("documents", [])
-        metadatas = results.get("metadatas", [])
-
-        # Ensure we have retrieved content
-        if not docs:
-            return {
-                "query": query,
-                "category": category,
-                "results": [],
-                "llm_response": "No relevant data found.",
-            }
-
-        # Formatting retrieved information for the output
-        retrieved_information = [
-            {
-                # Ensure article is a string
-                "article": " ".join(doc) if isinstance(doc, list) else doc,
-                "title": metadata.get("title", "Unknown Title"),
-                "published": metadata.get("published", "Unknown Date"),
-                "source": metadata.get("source", "Unknown Source"),
-                "tags": metadata.get("tags", "No Tags Available"),
-            }
-            # results["documents"]: list of strings
-            for doc, metadata_list in zip(docs, metadatas)
-            # results["metadatas"]: list of lists; each list has metadata dict
-            for metadata in (
-                metadata_list
-                if isinstance(metadata_list, list) and metadata_list
-                else [{}]
+            print("Generating response...")
+            # Generate refined response using Local LLM (single-turn)
+            llm_response = self.LLM.generate_response(
+                query, retrieved_text, prompt="concise", multi_turn=False
             )
-        ]
 
-        # Combine retrieved texts for LLM input (flatten doc lists into one str)
-        retrieved_text = "\n".join(
-            doc if isinstance(doc, str) else " ".join(doc) for doc in docs
-        )
+            # Store conversation history
+            if session_id:
+                self.cache[session_id] = self.LLM.conversation_history
 
-        # Generate refined response using Local LLM
-        llm_response = self.LLM.generate_response(
-            query, retrieved_text, prompt="concise", multi_turn=False
-        )
+        else:
+            print("Using conversation history for your follow-up question.")
+            print(f"Follow-up query: {query}, Session ID: {session_id}")
+
+            self.LLM.conversation_history = self.cache[session_id]
+
+            retrieved_text = "\n".join(
+                doc if isinstance(doc, str) else " ".join(doc)
+                for doc in self.cache.get(session_id, [])
+            )
+
+            # Generate response using conversation history (multi-turn)
+            llm_response = self.LLM.generate_response(
+                query, retrieved_text=retrieved_text, prompt="concise", multi_turn=True
+            )
+
+            # Update conversation history
+            self.cache[session_id] = self.LLM.conversation_history
 
         return {
             "query": query,
             "category": category,
-            "results": retrieved_information,
+            "results": retrieved_information if not follow_up else [],
             "llm_response": llm_response,
+            "session_id": session_id,
         }
 
 
@@ -114,15 +142,17 @@ app.add_middleware(
 )
 
 
-@app.get("/search_engine")
-async def search_engine(
-    q: str = Query(..., description="Search query"), category: str = None
+@app.get("/engine")
+async def engine(
+    q: str = Query(..., description="Search query"),
+    category: str = None,
+    session_id: str = None,
 ):
     """
-    Handles GET requests to the /search_engine endpoint.
+    Handles GET requests to the /engine endpoint.
 
-    > @app.get("/search_engine") is a FastAPI decorator that registers search_engine() as a handler for HTTP GET requests to the endpoint.
+    > @app.get("/engine") is a FastAPI decorator that registers engine() as a handler for HTTP GET requests to the endpoint.
     > q is a required (...) query parameter that must be a string.
     > description="Search query" adds documentation.
     """
-    return agent.search_engine(q, category)
+    return agent.engine(q, category, session_id)
