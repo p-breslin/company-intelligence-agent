@@ -30,15 +30,39 @@ class LocalLLM:
         - The user query and the retrieved content is input to the LLM.
         - The Output of LLM is a generated refined response.
         """
-        # Select prompt type
+        # Pre-defined prompt template
         prompt_template = self.prompts[prompt]
 
-        # Format the prompt with user query and retrieved text
-        input = prompt_template.format(
-            user_query=user_query, retrieved_text=retrieved_text
-        )
+        # If this is a follow-up, retrieve previous query and response
+        original_query = ""
+        previous_response = ""
 
-        # 1: Handle Chunking (if needed)
+        if multi_turn:
+            for message in reversed(self.conversation_history):
+                if message["role"] == "user" and not original_query:
+                    original_query = message["content"]
+
+                elif message["role"] == "assistant" and not previous_response:
+                    previous_response = message["content"]
+
+                # Break early if both values are found
+                if original_query and previous_response:
+                    break
+
+        # Format the prompt accordingly
+        if multi_turn:
+            input = prompt_template.format(
+                original_query=original_query,
+                previous_response=previous_response,
+                user_query=user_query,
+                retrieved_text=retrieved_text,
+            )
+        else:
+            input = prompt_template.format(
+                user_query=user_query, retrieved_text=retrieved_text
+            )
+
+        # Handle Chunking if needed
         if token_count(input) > self.chunking["limit"]:
             chunks = self.chunk_text(input)
             chunked_responses = []
@@ -89,7 +113,7 @@ class LocalLLM:
                 except Exception as e:
                     return f"LLM Summarization Error: {str(e)}"
 
-        # 2: No Chunking Required: Single-Turn or Multi-Turn Processing
+        # If no chunking required: either Single-Turn or Multi-Turn processing
         try:
             if multi_turn:
                 self.conversation_history.append({"role": "user", "content": input})
