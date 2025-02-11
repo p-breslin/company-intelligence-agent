@@ -57,7 +57,7 @@ class LocalLLM:
 
                     # Store agent response in history
                     self.conversation_history.append(
-                        {"role": "agent", "content": output}
+                        {"role": "assistant", "content": output}
                     )
                     return output
 
@@ -78,7 +78,14 @@ class LocalLLM:
 
                 try:
                     response = ollama.generate(model=self.llm, prompt=summary_prompt)
-                    return response["response"].strip()
+                    output = response.response.strip()
+
+                    # Store agent response in history
+                    self.conversation_history.append(
+                        {"role": "assistant", "content": output}
+                    )
+
+                    return output
                 except Exception as e:
                     return f"LLM Summarization Error: {str(e)}"
 
@@ -101,12 +108,19 @@ class LocalLLM:
                 output = response["message"]["content"].strip()
 
                 # Store agent response in history
-                self.conversation_history.append({"role": "agent", "content": output})
+                self.conversation_history.append(
+                    {"role": "assistant", "content": output}
+                )
 
             else:
                 # Single-turn mode does not maintain conversation history
                 response = ollama.generate(model=self.llm, prompt=input)
-                output = response["response"].strip()
+                output = response.response.strip()
+
+                # Store agent response in history
+                self.conversation_history.append(
+                    {"role": "assistant", "content": output}
+                )
 
             return output
 
