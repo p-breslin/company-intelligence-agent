@@ -15,6 +15,7 @@ Key Features:
 """
 
 import chromadb
+import urllib.parse
 from utils.config import config
 from fastapi import FastAPI, Query
 from LLM_integration import LocalLLM
@@ -92,32 +93,51 @@ class CIA:
             )
             print("Generating response...")
             # Generate refined response using Local LLM (single-turn)
-            llm_response = self.LLM.generate_response(
-                query, retrieved_text, prompt="concise", multi_turn=False
-            )
+            llm_response = self.LLM.generate_response(query, retrieved_text)
 
-            # Store conversation history
+            # Store chat history AND* the full article (*once per session)
             if session_id:
-                self.cache[session_id] = self.LLM.conversation_history
+                if session_id not in self.cache:
+                    self.cache[session_id] = {
+                        "conversation": self.LLM.conversation_history,
+                        "full_article": "\n".join(
+                            (
+                                urllib.parse.unquote(doc)
+                                if isinstance(doc, str)
+                                else " ".join(doc)
+                            )
+                            for doc in docs
+                        ),
+                    }
+                else:
+                    self.cache[session_id][
+                        "conversation"
+                    ] = self.LLM.conversation_history
 
         else:
             print("Using conversation history for your follow-up question.")
             print(f"Follow-up query: {query}, Session ID: {session_id}")
 
-            self.LLM.conversation_history = self.cache[session_id]
+            self.LLM.conversation_history = self.cache[session_id]["conversation"]
 
-            retrieved_text = "\n".join(
-                doc if isinstance(doc, str) else " ".join(doc)
-                for doc in self.cache.get(session_id, [])
+            # Retrieve full article from cache if available
+            full_article = self.cache[session_id].get("full_article", "")
+            retrieved_text = full_article  # Use full article for follow-ups
+
+            print(
+                f"Using full article for follow-up in session {session_id}: {full_article[:500]}..."
             )
 
             # Generate response using conversation history (multi-turn)
             llm_response = self.LLM.generate_response(
-                query, retrieved_text=retrieved_text, prompt="concise", multi_turn=True
+                query,
+                retrieved_text=retrieved_text,
+                prompt="follow_up",
+                multi_turn=True,
             )
 
             # Update conversation history
-            self.cache[session_id] = self.LLM.conversation_history
+            self.cache[session_id]["conversation"] = self.LLM.conversation_history
 
         return {
             "query": query,
