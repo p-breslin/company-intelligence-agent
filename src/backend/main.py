@@ -44,12 +44,31 @@ class CIA:
         follow_up = session_id in self.cache
 
         if not follow_up:
-            # Similarity search on ChromaDB embeddings
+            # Similarity search on ChromaDB embeddings WITH category filtering
             try:
                 print(f"Query: '{query}', Category: '{category}'")
-                results = self.collection.query(
-                    query_texts=[query], n_results=1, include=["documents", "metadatas"]
-                )
+
+                if category == "Any":
+                    results = self.collection.query(
+                        query_texts=[query],
+                        n_results=1,
+                        include=["documents", "metadatas"],
+                    )
+
+                    print(results.get("metadatas"))
+
+                else:
+                    # Category filtering by looking at Metadata
+                    filter = {"tags": {"$in": [category]}}
+                    print(filter)
+
+                    if filter:
+                        results = self.collection.query(
+                            query_texts=[query],
+                            n_results=1,
+                            include=["documents", "metadatas"],
+                            where=filter,
+                        )
             except Exception as e:
                 print(f"Error querying ChromaDB: {e}")
                 return {"error": "Failed to retrieve search results"}
@@ -75,7 +94,7 @@ class CIA:
                     "title": metadata.get("title", "Unknown Title"),
                     "published": metadata.get("published", "Unknown Date"),
                     "source": metadata.get("source", "Unknown Source"),
-                    "tags": metadata.get("tags", "No Tags Available"),
+                    "tags": metadata.get("tags", "No Tags").split(","),
                 }
                 # results["documents"]: list of strings
                 for doc, metadata_list in zip(docs, metadatas)
