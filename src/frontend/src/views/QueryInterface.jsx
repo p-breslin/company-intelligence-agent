@@ -94,11 +94,18 @@ export default function QueryInterface() {
       setData(fetchedResults.results);
       setLLMResponse(fetchedResults.llm_response || "No response available.");
 
-      // Update conversation block with LLM response
+      // Update conversation block with LLM response AND full article
+      // Store full article ONLY for the FIRST query in a session
       setConversation((prevConversation) =>
         prevConversation.map((entry) =>
           entry.session_id === sessionID
-            ? { ...entry, response: fetchedResults.llm_response }
+            ? {
+                ...entry,
+                response: fetchedResults.llm_response,
+                fullArticle:
+                  entry.fullArticle ||
+                  fetchedResults.results.map((doc) => doc.article).join("\n"), // Store full text ONLY ONCE
+              }
             : entry
         )
       );
@@ -134,9 +141,14 @@ export default function QueryInterface() {
     setFollowUpQuery("");
 
     try {
+      // Retrieve the stored full article
+      const fullArticleContext =
+        conversation.find((entry) => entry.session_id === sessionID)
+          ?.fullArticle || "";
+
       const followUpResults = await fetchResults(
         followUpQuery,
-        null,
+        fullArticleContext,
         sessionID
       );
 
