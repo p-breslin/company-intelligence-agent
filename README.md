@@ -85,16 +85,16 @@ company-intelligence-agent/
 
 ## Usage
 
-1. **Run the run file from the project root:**
-   ```bash
-   ./run.sh
-   ```
-   - This launches a FastAPI server (main.py in src/orchestrator) that handles data ingestion, categorization, and LLM queries.
-   - It also navigates to src/frontend and runs the web interface via `npm run dev`
-   - Access the web interface at http://localhost:5173 (or whichever port is configured).
+1. **Run the run file from the project root:** `./run.sh`
+
+- This launches a FastAPI server (main.py in src/orchestrator) that handles data ingestion, categorization, and LLM queries.
+- It also navigates to src/frontend and runs the web interface via `npm run dev`
+- Access the web interface at http://localhost:5173 (or whichever port is configured).
+
 2. **Interact with the Application**
-   - The system will automatically collect and process the user input.
-   - Use the web interface to run queries and browse conversation history.
+
+- The system will automatically collect and process the user input.
+- Use the web interface to run queries and browse conversation history.
 
 ## Troubleshooting
 
