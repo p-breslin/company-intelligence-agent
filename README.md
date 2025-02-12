@@ -91,8 +91,16 @@ company-intelligence-agent/
 - It also navigates to src/frontend and runs the web interface via `npm run dev`
 - Access the web interface at http://localhost:5173 (or whichever port is configured).
 
+**Initial Query:**
+
 ![App Demo](docs/demo/gif1.gif)
+
+**Follow-Up Query & Viewing Conversation History:**
+
 ![App Demo](docs/demo/gif2.gif)
+
+**New Query**
+
 ![App Demo](docs/demo/gif3.gif)
 
 2. **Interact with the Application**
