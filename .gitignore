@@ -27,3 +27,6 @@ dist/
 .env  
 src/backend/chromadb_store/chroma.sqlite3
 *.pyc
+docs/DataFlow.pdf
+docs/Frontend.pdf
+docs/MDI.pdf
