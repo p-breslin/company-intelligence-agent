@@ -27,8 +27,8 @@ class CIA:
         self.LLM = LocalLLM()
         self.cache = {}
 
-        # Initialize ChromaDB client and collection
         try:
+            # Initialize ChromaDB client and collection
             chroma = config.get_section("chroma")
             client = chromadb.PersistentClient(path=chroma["root"])
             self.collection = client.get_or_create_collection(name=chroma["dbname"])
@@ -37,35 +37,44 @@ class CIA:
             print(f"ChromaDB Initialization Failed: {e}")
             self.collection = None
 
+    def embedding_search(self, query):
+        """Performs a similarity search on the ChromaDB database."""
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=1,
+            include=["documents", "metadatas"],
+        )
+        return results
+
     def engine(self, query: str, category: str = None, session_id: str = None):
         """Handles queries, info retrieval, LLM refinement, follow-ups."""
 
         # Identify if new session or following up a previous session
         follow_up = session_id in self.cache
 
+        # Directly do a similarity search if not a follow-up query
         if not follow_up:
-            # Similarity search on ChromaDB embeddings WITH category filtering
             try:
                 print(f"Query: '{query}', Category: '{category}'")
 
-                if category == "Any":
+                # Category filtering by looking at Metadata
+                if category != "Any":
+                    filter = {"tags": {"$in": [category]}}
+
                     results = self.collection.query(
                         query_texts=[query],
                         n_results=1,
                         include=["documents", "metadatas"],
+                        where=filter,  # won't work but problem known
                     )
-                else:
-                    # Category filtering by looking at Metadata
-                    # SKIPPING due to inability
-                    filter = {"tags": {"$in": [category]}}
+                    # If filtering fails, fall back on no filter
+                    if not results["embeddings"]:
+                        results = self.embedding_search(query)
 
-                    if filter:
-                        results = self.collection.query(
-                            query_texts=[query],
-                            n_results=1,
-                            include=["documents", "metadatas"],
-                            # where=filter,
-                        )
+                else:
+                    # No category filtering
+                    results = self.embedding_search(query)
+
             except Exception as e:
                 print(f"Error querying ChromaDB: {e}")
                 return {"error": "Failed to retrieve search results"}
@@ -137,12 +146,7 @@ class CIA:
             self.LLM.conversation_history = self.cache[session_id]["conversation"]
 
             # Retrieve full article from cache if available
-            full_article = self.cache[session_id].get("full_article", "")
-            retrieved_text = full_article  # Use full article for follow-ups
-
-            print(
-                f"Using full article for follow-up in session {session_id}: {full_article[:500]}..."
-            )
+            retrieved_text = self.cache[session_id].get("full_article", "")
 
             # Generate response using conversation history (multi-turn)
             llm_response = self.LLM.generate_response(
@@ -171,8 +175,8 @@ agent = CIA()
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (for now, restrict later)
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins (maybe restrict later)
+    allow_credentials=True,  # Allow cookies and authentication headers
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -186,9 +190,8 @@ async def engine(
 ):
     """
     Handles GET requests to the /engine endpoint.
-
-    > @app.get("/engine") is a FastAPI decorator that registers engine() as a handler for HTTP GET requests to the endpoint.
-    > q is a required (...) query parameter that must be a string.
-    > description="Search query" adds documentation.
+    - @app.get("/engine") is a FastAPI decorator
+    - This registers engine() as a handler for HTTP GET requests to the endpoint
+    - q is a required (...) query parameter that must be a string
     """
     return agent.engine(q, category, session_id)
