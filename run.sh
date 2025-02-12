@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 # Start FastAPI in the background and store its process ID (PID)
-(cd src/backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000) & 
+(cd src/orchestrator && uvicorn main:app --reload --host 0.0.0.0 --port 8000) & 
 UVICORN_PID=$!
 
 # Start the React frontend
