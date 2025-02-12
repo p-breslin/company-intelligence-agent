@@ -51,7 +51,7 @@ company-intelligence-agent/
 - **Tailwind CSS** (installed alongside the frontend)
 - **FastAPI** (installed via `requirements.txt`)
 - **Ollama** (for local LLM inference)
-- **PostgreSQL** (if you plan to store or index data in a local database)
+- **PostgreSQL** (for storing extracted data in a local database)
 
 ### Installation
 
