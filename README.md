@@ -6,7 +6,7 @@ An AI-powered intelligence agent that monitors and analyzes company-related news
 
 The **Company Intelligence Agent** is designed to monitor and analyze company-related news and content. Data is collected and processed from online sources (RSS feeds, web scraping, etc.). A Retrieval-Augmented Generation (RAG) system then integrates this data into a local Large Language Model (LLM), allowing users to query the information through a locally hosted interface.
 
-## Features
+### Features
 
 - **Automated Content Collection**  
   Collects data from configurable RSS feeds and web sources (blogs, websites, etc.).
@@ -17,7 +17,17 @@ The **Company Intelligence Agent** is designed to monitor and analyze company-re
 - **Search & Query Support**  
   Offers a user-friendly interface, enabling you to browse or query collected data directly.
 
-## Project Structure
+## System Overview
+
+### System Module Design
+
+![System Module Design](assets/system_module_design.png)
+
+### Data Flow
+
+![Data Flow](assets/data_flow.png)
+
+## Repository Structure
 
 ```
 company-intelligence-agent/
