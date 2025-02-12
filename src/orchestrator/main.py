@@ -18,7 +18,7 @@ import chromadb
 import urllib.parse
 from utils.config import config
 from fastapi import FastAPI, Query
-from LLM_integration import LocalLLM
+from backend.LLM_integration import LocalLLM
 from fastapi.middleware.cors import CORSMiddleware
 
 
