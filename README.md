@@ -21,7 +21,6 @@ company-intelligence-agent/
 │── configs/                 # Config files (e.g., env variables, settings)
 │── tests/                   # Unit and integration tests
 │── docs/                    # Documentation (API specs, setup guide)
-│── notebooks/               # Jupyter notebooks for experiments
 │── .gitignore               # Ignore unnecessary files
 │── README.md                # Project overview and instructions
 │── requirements.txt         # Python dependencies
