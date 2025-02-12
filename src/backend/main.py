@@ -54,20 +54,17 @@ class CIA:
                         n_results=1,
                         include=["documents", "metadatas"],
                     )
-
-                    print(results.get("metadatas"))
-
                 else:
                     # Category filtering by looking at Metadata
+                    # SKIPPING due to inability
                     filter = {"tags": {"$in": [category]}}
-                    print(filter)
 
                     if filter:
                         results = self.collection.query(
                             query_texts=[query],
                             n_results=1,
                             include=["documents", "metadatas"],
-                            where=filter,
+                            # where=filter,
                         )
             except Exception as e:
                 print(f"Error querying ChromaDB: {e}")
