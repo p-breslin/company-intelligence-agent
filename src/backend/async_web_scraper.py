@@ -15,7 +15,6 @@ class AsyncScraper:
         """
         self.incomplete = incomplete
 
-
     def respect_robots(self, source):
         """
         Determines if scraping is allowed and what the crawl delay is.
@@ -23,7 +22,7 @@ class AsyncScraper:
         """
         robots_url = urljoin("https://" + source, "/robots.txt")
         rp = RobotFileParser()
-        
+
         try:
             rp.set_url(robots_url)
             rp.read()
@@ -33,7 +32,6 @@ class AsyncScraper:
         except Exception as e:
             print(f"Error fetching robots.txt from {source}: {e}")
             return True, 2  # Assume scraping is allowed with default delay
-
 
     async def single_scrape(self, session, url, article):
         """Scrapes a single article asynchronously."""
@@ -83,13 +81,18 @@ class AsyncScraper:
                 # Extract content if missing
                 if not article["content"]:
                     content_tag = soup.find("article")
-                    article["content"] = clean_html(content_tag.text.strip(), feed="web") if content_tag else None
+                    article["content"] = (
+                        clean_html(content_tag.text.strip(), feed="web")
+                        if content_tag
+                        else None
+                    )
 
                 # Extract summary if missing
                 if not article["summary"]:
                     meta_tags = [
-                        {"name": "description"}, {"property": "og:description"}
-                        ]
+                        {"name": "description"},
+                        {"property": "og:description"},
+                    ]
                     for meta in meta_tags:
                         tag = soup.find("meta", meta)
                         if tag and "content" in tag.attrs:
@@ -99,11 +102,14 @@ class AsyncScraper:
                 # Extract tags if missing (TO-DO: ML CLASSIFIER)
                 if not article["tags"]:
                     tag = soup.find("meta", {"name": "keywords"})
-                    article["tags"] = tag.get("content") if tag else None
+                    if tag and "content" in tag.attrs:
+                        article["tags"] = [x.strip() for x in tag["content"].split(",")]
 
                 # Compute hash if missing
                 if not article["hash"]:
-                    article["hash"] = compute_hash(article.get("title"), article.get("source"))
+                    article["hash"] = compute_hash(
+                        article.get("title"), article.get("source")
+                    )
 
                 # Temporary workaround: if no content, use the summary
                 if not article["content"]:
@@ -114,7 +120,6 @@ class AsyncScraper:
         except Exception as e:
             print(f"Error scraping {url}: {e}")
             return url, None
-
 
     async def scrape_articles(self, articles):
         """Asyncchronous scraping for multiple articles (all at once)."""
@@ -136,7 +141,6 @@ class AsyncScraper:
             # Concurrently run multiple asynchronous tasks in parallel
             scraped_results = await asyncio.gather(*tasks)
         return scraped_results
-
 
     def async_scrape(self, articles):
         """Starts async scraping and updates missing content."""
