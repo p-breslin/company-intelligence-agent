@@ -30,3 +30,4 @@ src/backend/chromadb_store/chroma.sqlite3
 docs/DataFlow.pdf
 docs/Frontend.pdf
 docs/MDI.pdf
+*.pyc
