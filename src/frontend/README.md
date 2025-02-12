@@ -4,7 +4,7 @@ This directory contains the frontend code for the Company Intelligence Agent, bu
 
 ## Overview
 
-![Frontend](docs/diagrams/Frontend.png)
+![Frontend](../../docs/diagrams/Frontend.png)
 
 ## Structure
 
