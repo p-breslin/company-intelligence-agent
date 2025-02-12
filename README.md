@@ -1,22 +1,37 @@
 # company-intelligence-agent
- An AI-powered intelligent agent that monitors and analyzes company-related news, categorizes content into meaningful groups, and enables users to query information through a simple interface.
+
+An AI-powered intelligence agent that monitors and analyzes company-related news, categorizes content into meaningful groups, and enables users to query information through a simple interface.
 
 ## Overview
-The Company Intelligence Agent is an AI-powered system designed to monitor and analyze company-related news and content. It collects data from RSS feeds and web scraping, processes and categorizes it, and allows users to query the information through a simple interface.
+
+The **Company Intelligence Agent** is designed to monitor and analyze company-related news and content. Data is collected and processed from online sources (RSS feeds, web scraping, etc.). A Retrieval-Augmented Generation (RAG) system then integrates this data into a local Large Language Model (LLM), allowing users to query the information through a locally hosted interface.
 
 ## Features
-- **Automated Content Collection**: Gathers data from configurable RSS feeds and web sources.
-- **Intelligent Categorization**: Uses an LLM to classify content into meaningful categories.
-- **Search & Query Support**: Enables users to query collected data via a user-friendly interface.
+
+- **Automated Content Collection**  
+  Collects data from configurable RSS feeds and web sources (blogs, websites, etc.).
+
+- **Intelligent Categorization**  
+  Leverages an LLM to classify or cluster collected content into meaningful categories.
+
+- **Search & Query Support**  
+  Offers a user-friendly interface, enabling you to browse or query collected data directly.
 
 ## Project Structure
+
 ```
 company-intelligence-agent/
+|
+├── scripts/                 # Routine scripts for initial set-up
+│   ├── postgres_init.py     # Sets up the postgreSQL user, database, and table locally
+│   ├── chroma_init.py       # Sets up the ChromaDB database locally
+│   ├── embedding_model.py   # Populates the ChromaDB database with vector embeddings
+|
 │── src/                     # Main source code
-│   │── backend/             # Backend (FastAPI, data pipeline, LLM integration)
-│   │── frontend/            # Frontend (React)
-│   │── orchestrator/        # Manages content ingestion and updates
-│   │── utils/               # Helper functions, utilities
+│   │── backend/             # Backend code (Data pipeline, LLM integration)
+│   │── frontend/            # Frontend code (React, Node.js)
+│   │── orchestrator/        # Manages content ingestion (FastAPI) and updates
+│   │── utils/               # Helper functions and additional utilities
 │
 │── configs/                 # Config files (e.g., env variables, settings)
 │── tests/                   # Unit and integration tests
@@ -28,30 +43,66 @@ company-intelligence-agent/
 ```
 
 ## Setup Instructions
+
 ### Prerequisites
-- Python 3.10+
-- React (for frontend development)
+
+- **Python 3.10+**
+- **Node.js** (for the frontend; version 16+ recommended)
+- **Tailwind CSS** (installed alongside the frontend)
+- **FastAPI** (installed via `requirements.txt`)
+- **Ollama** (for local LLM inference)
+- **PostgreSQL** (if you plan to store or index data in a local database)
 
 ### Installation
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/p-breslin/company-intelligence-agent.git
    cd company-intelligence-agent
    ```
-2. Set up a virtual environment and install dependencies:
+2. Set up a virtual environment and install Python dependencies:
    ```bash
    python -m venv venv
    source venv/bin/activate   # On Windows use: venv\Scripts\activate
    pip install -r requirements.txt
    ```
-3. TO-DO
-
+3. Install frontend dependencies:
+   ```bash
+   cd src/frontend
+   npm install
+   cd ../..
+   ```
+4. Initialize and populate the the postgreSQL database:
+   ```bash
+   python scripts/postgres_init.py
+   python src/backend/async_extract_data.py
+   ```
+5. Initialize and populate the the ChromaDB database:
+   ```bash
+   python scripts/chroma_init.py
+   python scripts/embedding_model.py
+   ```
 
 ## Usage
-- The system will collect and process data automatically.
-- Use the web interface to browse content and run queries.
-- Adjust settings via the configuration panel.
 
+1. **Run the run file from the project root:**
+   ```bash
+   ./run.sh
+   ```
+   - This launches a FastAPI server (main.py in src/orchestrator) that handles data ingestion, categorization, and LLM queries.
+   - It also navigates to src/frontend and runs the web interface via `npm run dev`
+   - Access the web interface at http://localhost:5173 (or whichever port is configured).
+2. **Interact with the Application**
+   - The system will automatically collect and process the user input.
+   - Use the web interface to run queries and browse conversation history.
+
+## Troubleshooting
+
+- **Database Issues:** Verify your PostgreSQL or Chroma instance is running and configured properly in any relevant scripts or environment variables.
+- **Missing Dependencies:** Double-check you installed everything in requirements.txt (for Python) and package.json (for Node).
+- **CORS or Network Errors:** If requests are blocked, adjust the FastAPI or React dev server settings to allow cross-origin requests.
+- **Ollama Errors:** Ensure Ollama is installed and running if you rely on local LLM inference.
 
 ## License
+
 TO-DO
