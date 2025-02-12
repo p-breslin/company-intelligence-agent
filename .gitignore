@@ -2,10 +2,13 @@
 .DS_Store  
 
 # Python build and cache files  
+*.pyc
 src/company_intelligence_agent.egg-info/  
 src/utils/__pycache__/  
 src/backend/__pycache__/  
 src/backend/__pycache__/*.pyc  
+src/backend/chromadb_store/chroma.sqlite3
+src/orchestrator/__pycache__/main.cpython-313.pyc
 
 # Ignoring specific Python scripts
 scripts/postgres_init.py  
@@ -25,9 +28,8 @@ dist/
 
 # Environment variables  
 .env  
-src/backend/chromadb_store/chroma.sqlite3
-*.pyc
+
+# Documents
 docs/DataFlow.pdf
 docs/Frontend.pdf
 docs/MDI.pdf
-*.pyc
