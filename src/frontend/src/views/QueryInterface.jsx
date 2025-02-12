@@ -121,6 +121,8 @@ export default function QueryInterface() {
   const handleFollowUp = async () => {
     if (!followUpQuery || !sessionID) return;
 
+    setLoading(true);
+
     // Add follow-up placeholder response
     setConversation((prevConversation) =>
       prevConversation.map((entry) =>
@@ -192,6 +194,8 @@ export default function QueryInterface() {
             : entry
         )
       );
+    } finally {
+      setLoading(false); // Reset loading state after response is received
     }
   };
 
