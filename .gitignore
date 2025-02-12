@@ -26,3 +26,4 @@ dist/
 # Environment variables  
 .env  
 src/backend/chromadb_store/chroma.sqlite3
+*.pyc
