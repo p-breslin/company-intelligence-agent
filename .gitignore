@@ -27,3 +27,5 @@ dist/
 .env  
 src/backend/chromadb_store/chroma.sqlite3
 *.pyc
+/demo_gifs
+/diagrams
