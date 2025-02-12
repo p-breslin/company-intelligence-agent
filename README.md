@@ -21,11 +21,11 @@ The **Company Intelligence Agent** is designed to monitor and analyze company-re
 
 ### System Module Design
 
-![MDI](docs/diagrams/MDI.pdf)
+![MDI](docs/diagrams/MDI.png)
 
 ### Data Flow
 
-![DataFlow](docs/diagrams/DataFlow.pdf)
+![DataFlow](docs/diagrams/DataFlow.png)
 
 ## Repository Structure
 
