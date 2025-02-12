@@ -57,11 +57,13 @@ company-intelligence-agent/
 ### Prerequisites
 
 - **Python 3.10+**
-- **Node.js** (for the frontend; version 16+ recommended)
-- **Tailwind CSS** (installed alongside the frontend)
+- **React**
+- **Node.js**
+- **Tailwind CSS**
 - **FastAPI** (installed via `requirements.txt`)
+- **ChromaDB** (installed via `requirements.txt`)
 - **Ollama** (for local LLM inference)
-- **PostgreSQL** (for storing extracted data in a local database)
+- **PostgreSQL**
 
 ### Installation
 
@@ -76,22 +78,27 @@ company-intelligence-agent/
    source venv/bin/activate   # On Windows use: venv\Scripts\activate
    pip install -r requirements.txt
    ```
-3. Install frontend dependencies:
+3. Install the project as a package:
+   ```bash
+   pip install -e .
+   ```
+4. Install frontend dependencies:
    ```bash
    cd src/frontend
    npm install
    cd ../..
    ```
-4. Initialize and populate the the postgreSQL database:
+5. Initialize and populate the postgreSQL database:
    ```bash
    python scripts/postgres_init.py
    python src/backend/async_extract_data.py
    ```
-5. Initialize and populate the the ChromaDB database:
+6. Initialize and populate the ChromaDB database:
    ```bash
    python scripts/chroma_init.py
    python scripts/embedding_model.py
    ```
+7. Good to go!
 
 ## Usage
 
