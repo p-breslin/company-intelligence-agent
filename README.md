@@ -91,6 +91,10 @@ company-intelligence-agent/
 - It also navigates to src/frontend and runs the web interface via `npm run dev`
 - Access the web interface at http://localhost:5173 (or whichever port is configured).
 
+![Demo GIF](data/demo_gifs/gif1.gif)
+![Demo GIF](data/demo_gifs/gif2.gif)
+![Demo GIF](data/demo_gifs/gif3.gif)
+
 2. **Interact with the Application**
 
 - The system will automatically collect and process the user input.
