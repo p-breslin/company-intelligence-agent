@@ -97,7 +97,7 @@ class LocalLLM:
                     except Exception as e:
                         chunked_responses.append(f"LLM Error on chunk: {str(e)}")
 
-                # Merge responses into a coherent answer
+                # Merge responses into a coherent answer (this needs work)
                 summary_prompt = f"Here are multiple responses related to the same query:\n\n{'\n'.join(chunked_responses)}\n\nPlease summarize them into a single, well-structured answer."
 
                 try:
@@ -149,7 +149,7 @@ class LocalLLM:
             return output
 
         except Exception as e:
-            return f"LLM Error: {str(e)}"  # Return error message if API fails
+            return f"LLM Error: {str(e)}"
 
 
 if __name__ == "__main__":
