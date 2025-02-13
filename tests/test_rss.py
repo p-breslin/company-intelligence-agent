@@ -36,20 +36,17 @@ if __name__ == "__main__":
     test.raw_rss_feed()
     test.rss_handler()
 
-    # # Convert raw and clean data into DataFrames
-    # raw = pd.DataFrame(test.raw)
-    # clean = pd.DataFrame(test.clean)
+    # Convert raw and clean data into DataFrames
+    raw = pd.DataFrame(test.raw)
+    clean = pd.DataFrame(test.clean)
 
-    # # Merge them side-by-side for easy comparison
-    # comp = raw.add_suffix("_raw").join(clean.add_suffix("_clean"))
-    # comp.to_csv("test_rss.csv", index=False)
+    # Stacking them one after the other (for each entry)
+    raw["Type"] = "Raw"
+    clean["Type"] = "Clean"
 
-    # # Stacking them one after the other (for each entry)
-    # raw["Type"] = "Raw"
-    # clean["Type"] = "Clean"
+    stacked = pd.concat([raw, clean]).sort_index(kind="stable").reset_index(drop=True)
 
-    # stacked = pd.concat([raw, clean]).sort_index(kind="stable").reset_index(drop=True)
+    # with pd.option_context("max_colwidth", 100):
+    stacked.to_csv("data/rss_stacked.csv", index=False)
 
-    # stacked.to_csv("rss_stacked.csv", index=False)
-
-    # print(clean.iloc[:]["tags"])
+    print(stacked.columns)
