@@ -1,18 +1,14 @@
 /**
  * ResponseCard Component
  * --------------------
- * Displays a single search result, including a title and a summary.
+ * Displays a single search result, including a title and LLM response.
  *
  * Props:
  * - title (string): The title of the search result.
- * - summary (string): A brief summary or description of the search result.
+ * - summary (string): The summary given by the LLM.
  *
  * Usage:
- * <ResponseCard title="Example Title" summary="Summary of the result." />
- *
- * Styles:
- * - Uses Tailwind CSS for layout and styling.
- * - Adds a shadow for a card-like appearance.
+ * <ResponseCard title="Title of article" summary="LLM response." />
  */
 
 import React from "react";

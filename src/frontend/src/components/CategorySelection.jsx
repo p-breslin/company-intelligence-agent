@@ -9,10 +9,6 @@
  *
  * Usage:
  * <CategorySelection categories={categories} onSelect={handleCategorySelect} />
- *
- * Styles:
- * - Uses Tailwind CSS for layout and styling.
- * - Adds hover effect to category buttons for better user experience.
  */
 
 export default function CategorySelection({ categories, onSelect }) {

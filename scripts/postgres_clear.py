@@ -6,21 +6,24 @@ from psycopg import OperationalError
 
 try:
     # Import the database configuration details
-    db = config.get_section('DB_USER')
+    db = config.get_section("DB_USER")
 
     # First connect as superuser ('postgres')
-    conn = psycopg.connect(**config.get_section('DB_SUPER'))
-    conn.autocommit = True 
+    conn = psycopg.connect(**config.get_section("DB_SUPER"))
+    conn.autocommit = True
     cur = conn.cursor()
 
     # Cannot drop a database if there are active connections to it.
     # Terminate active connections to the database before dropping it
-    cur.execute(f"""
+    cur.execute(
+        f"""
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
         WHERE pg_stat_activity.datname = %s;
-    """, (db['dbname'],))
-    
+    """,
+        (db["dbname"],),
+    )
+
     # Drop the database
     cur.execute(f"DROP DATABASE IF EXISTS {db['dbname']};")
     print(f"Database '{db['dbname']}' dropped successfully.")

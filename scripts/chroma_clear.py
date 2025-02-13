@@ -8,15 +8,14 @@ def clear_chroma(configs):
     """Deletes the Chroma database."""
     try:
         # Deletes everything inside the folder
-        if os.path.exists(configs['root']):
-            shutil.rmtree(configs['root'])  
+        if os.path.exists(configs["root"]):
+            shutil.rmtree(configs["root"])
             print("ChromaDB storage deleted successfully.")
         else:
             print("ChromaDB storage folder not found.")
-    
+
     except Exception as e:
         print(f"An error occurred while deleting ChromaDB storage: {e}")
-
 
 
 def list_collections(configs):
@@ -40,6 +39,6 @@ def list_collections(configs):
 
 
 if __name__ == "__main__":
-    configs = config.get_section('chroma')
+    configs = config.get_section("chroma")
     clear_chroma(configs)
     list_collections(configs)

@@ -11,10 +11,6 @@
  *
  * Usage:
  * <ChatHistory conversation={conversation} />
- *
- * Styles:
- * - Uses Tailwind CSS for layout and styling.
- * - Applies spacing and borders for better readability.
  */
 
 import React from "react";

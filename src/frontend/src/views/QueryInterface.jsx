@@ -27,7 +27,6 @@
  * <QueryInterface />
  *
  * Dependencies:
- * - Uses React's useState for state management.
  * - UI components (QueryInput, CategorySelection, ResultCard, ChatHistory).
  * - Fetches results from the FastAPI service.
  * - Reads categories from a frontend configuration file.

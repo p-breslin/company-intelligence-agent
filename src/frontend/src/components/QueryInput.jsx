@@ -11,10 +11,6 @@
  *
  * Usage:
  * <QueryInput query={query} setQuery={setQuery} onSubmit={handleSubmit} />
- *
- * Styles:
- * - Uses Tailwind CSS for layout and styling.
- * - Includes hover effect for better UI feedback.
  */
 
 export default function QueryInput({ query, setQuery, onSubmit }) {
