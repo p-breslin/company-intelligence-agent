@@ -12,7 +12,6 @@ class RSSHandler:
         self.feeds = feeds
         self.incomplete = []  # URLs that need additional scraping
 
-
     def fetch(self):
         """Fetch and parse RSS feed data."""
         articles = []
@@ -29,28 +28,38 @@ class RSSHandler:
                 for field in self.schema.keys():
                     value = getattr(entry, field, None)
 
-                    if field in {"title", "link", "author", "summary"}:
-                        data[field] = clean_html(value, feed="rss") if value and field == "title" else value
+                    if field == "link":
+                        data[field] = value
+
+                    if field in {"title", "author", "summary"}:
+                        data[field] = clean_html(value, feed="rss")
 
                     elif field == "published":
                         try:
-                            # Parse and convert RSS date string into Python datetime
+                            # Parse and convert RSS date str into datetime obj
                             data[field] = parser.parse(value) if value else None
                         except Exception as e:
                             print(f"Error parsing date '{value}': {e}")
 
                     elif field == "source":
-                        data[field] = urlparse(source).netloc 
+                        data[field] = urlparse(source).netloc
 
                     elif field == "content":
-                    # Use cleaned full content if there; otherwise mark for scraping
+                        # Use cleaned full content; otherwise mark for scraping
                         if hasattr(entry, field):
                             data[field] = clean_html(entry.content[0].value, feed="rss")
                         else:
-                            self.incomplete.append(data["link"])  # Mark for scraping
+                            # Mark for scraping
+                            self.incomplete.append(data["link"])
 
                     elif field == "tags":
-                        data[field] = value[0]['term'] if value else None
+                        if value:
+                            # Tag 1 would be value[0]["term"]
+                            data[field] = ", ".join(
+                                tag["term"] for tag in value if "term" in tag
+                            )
+                        else:
+                            data[field] = None
 
                     elif field == "hash":
                         data["hash"] = compute_hash(data["title"], data["source"])
