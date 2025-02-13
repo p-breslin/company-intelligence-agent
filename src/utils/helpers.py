@@ -17,18 +17,29 @@ def compute_hash(title, url):
 def clean_html(raw_html, feed="rss"):
     """Extracts text from raw HTML and removes unnecessary elements."""
 
+    # Remove HTML entities (ellipses handled at the end)
+    raw_html = html.unescape(raw_html)
+
     # Parse with BeautifulSoup to remove HTML tags
     soup = BeautifulSoup(raw_html, "html.parser")
 
     if feed == "rss":
-        # Preserve paragraph breaks; normalize whitespace; convert HTML entities
+        # Preserve paragraph breaks
         text = "\n\n".join(soup.stripped_strings)
-        text = re.sub(r"\s+", " ", html.unescape(text)).strip()
 
-    if feed == "web":
-        # Use space instead of newlines for better readability
+    elif feed == "web":
+        # Use spaces instead of newlines for better readability
         text = soup.get_text(separator=" ")
-        text = re.sub(r"\s+", " ", text).strip()
+
+    else:
+        text = soup.get(text)
+
+    # Normalize whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Replace ellipses with a clear indicator
+    text = text.replace("[&#8230;]", "(content truncated).")
+    text = text.replace("[…]", "(content truncated).")
 
     return text
 
