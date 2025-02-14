@@ -4,7 +4,7 @@ from dateutil import parser
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
-from utils.helpers import compute_hash, clean_html
+from utils.helpers import clean_html
 
 
 class AsyncScraper:
@@ -145,7 +145,6 @@ class AsyncScraper:
             if data:
                 for article in articles:
                     if article["link"] == url:
-                        print(url)
                         article.update(data)
                         break
         print("Async scraping complete.")
