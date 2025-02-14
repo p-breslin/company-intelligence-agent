@@ -17,30 +17,33 @@ class GenerateEmbeddings:
             db_conn=self.db_conn, data=self.chroma["data"], only_new=True
         )
 
-        for article in articles:
-            data = dict(zip(self.chroma["data"], article))
+        if articles:
+            for article in articles:
+                data = dict(zip(self.chroma["data"], article))
 
-            # ChromaDB doesn’t support certain dtypes in metadata
-            # Must ensure all metadata values are converted to strings
-            metadata_dict = {}
-            for key in self.chroma["metadata"]:
-                if key in data:
-                    value = data[key]
-                    if isinstance(value, (list, dict, tuple, set, bytes)):
-                        value = str(value)
-                    elif isinstance(value, datetime):
-                        value = value.isoformat()  # (YYYY-MM-DD HH:MM:SS)
-                    metadata_dict[key] = value
+                # ChromaDB doesn’t support certain dtypes in metadata
+                # Must ensure all metadata values are converted to strings
+                metadata_dict = {}
+                for key in self.chroma["metadata"]:
+                    if key in data:
+                        value = data[key]
+                        if isinstance(value, (list, dict, tuple, set, bytes)):
+                            value = str(value)
+                        elif isinstance(value, datetime):
+                            value = value.isoformat()  # (YYYY-MM-DD HH:MM:SS)
+                        metadata_dict[key] = value
 
-            # Store collection with default embedding model (all-MiniLM-L6-v2)
-            self.collection.add(
-                ids=[f"{data['hash']}"],
-                documents=[data["content"]],
-                metadatas=[metadata_dict],
-            )
+                # Store collection with default embedding model (all-MiniLM-L6-v2)
+                self.collection.add(
+                    ids=[f"{data['hash']}"],
+                    documents=[data["content"]],
+                    metadatas=[metadata_dict],
+                )
 
-            self.mark_as_embedded(data["hash"])
-        print(f"Stored new embeddings.")
+                self.mark_as_embedded(data["hash"])
+            print("Stored new embeddings.")
+        else:
+            print("No new data to embed.")
 
     def mark_as_embedded(self, hash):
         """Update postgres table to reflect when entry has been embedded."""
