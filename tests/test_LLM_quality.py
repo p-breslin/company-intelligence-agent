@@ -1,3 +1,4 @@
+import ollama
 import pandas as pd
 from utils.config import ConfigLoader
 from backend.LLM_integration import LocalLLM
@@ -28,8 +29,21 @@ class TestLLM:
         )
         df.to_csv("data/test_LLM.csv", index=False)
 
+    def LLM_without_data(self):
+        responses = []
+        for q in self.questions:
+            print(q)
+            output = ollama.generate(
+                model="llama3.2:1b",
+                prompt=f"Provide a one sentence answer to the following query: {q}",
+            )
+            responses.append(output.response.strip())
+        df = pd.DataFrame({"Local LLM without data": responses})
+        df.to_csv("data/test_LLM_no_data.csv", index=False)
+
 
 if __name__ == "__main__":
     test = TestLLM()
-    test.LLM_response()
-    test.save_dataframe()
+    # test.LLM_response()
+    # test.save_dataframe()
+    test.LLM_without_data()
