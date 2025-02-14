@@ -3,11 +3,11 @@ import json
 
 
 class ConfigLoader:
-    def __init__(self):
+    def __init__(self, filename="config"):
         """Handles configuration loading from a JSON file."""
         self.root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
         self.config_path = os.getenv(
-            "DB_CONFIG_PATH", os.path.join(self.root, "configs/config.json")
+            "DB_CONFIG_PATH", os.path.join(self.root, f"configs/{filename}.json")
         )
 
         if not os.path.exists(self.config_path):
