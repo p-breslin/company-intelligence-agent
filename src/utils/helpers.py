@@ -123,7 +123,7 @@ def import_postgres_data(db_conn, data="all", only_new=False):
     if only_new:
         query += " WHERE embedded IS FALSE"  # Adjust based on your schema
 
-    cursor.execute(f"SELECT {columns} FROM articles;")
+    cursor.execute(query)
     articles = cursor.fetchall()  # list of tuples (each one is a database row)
     cursor.close()
     print("Articles imported from postgreSQL database.")
