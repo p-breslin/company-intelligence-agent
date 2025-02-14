@@ -11,7 +11,7 @@
         "What revenue target did AMD’s CEO project for AI business in the coming years?",
         "What was AMD’s revenue forecast for Q1 2025 and which segments are expected to decline?",
         "Why did analysts lower AMD’s stock price target despite strong Q4 results?",
-        "What is DeepSeek and how has it affected the AI market and AMD’s response?"],
+        "Why did Citi lower its price target for AMD stock after the Q4 2024 earnings report?"],
 
     "Answers": [
         "AMD's Q4 2024 revenue was $7.7 billion, reflecting a 24% year-over-year growth.",
@@ -23,6 +23,6 @@
         "AMD’s CEO projected AI business revenue to grow to tens of billions over the next few years.",
         "AMD forecasted Q1 2025 revenue at approximately $7.1 billion, with gaming and embedded segments expected to decline.",
         "Analysts lowered AMD’s stock price target due to its status as a distant runner-up to Nvidia and general AI market unease.",
-        "DeepSeek is a Chinese AI innovation reducing GPU needs, which AMD welcomed as positive for AI adoption and open source."]
+        "Citi lowered its price target for AMD due to AI market uncertainty and AMD’s status as a distant runner-up to Nvidia."]
       
 }

@@ -15,7 +15,7 @@ class TestLLM:
         llm = LocalLLM()
         for q in self.questions:
             print(q)
-            response = llm.generate_response(q, self.article, prompt="test")
+            response = llm.generate_response(q, self.article, prompt="test_short")
             self.local_LLM.append(response)
 
     def save_dataframe(self):
