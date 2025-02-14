@@ -77,6 +77,11 @@ def store_to_postgres(articles, db_conn):
         try:
             # Get column names dynamically from schema
             columns = list(config.get_section("schema").keys())
+
+            # If embedded is in columns w/o a value, PostgreSQL will error
+            if "embedded" in columns:
+                columns.remove("embedded")
+
             # Create placeholders for values
             placeholders = ", ".join(["%s"] * len(columns))
             # Join column names for SQL query
@@ -117,11 +122,15 @@ def import_postgres_data(db_conn, data="all", only_new=False):
     if data == "all":
         columns = "*"
     else:
+        # Ensure 'embedded' column is included for filtering
+        if "embedded" not in data:
+            data.append("embedded")
         columns = ", ".join(data)
+        print(columns)
 
     query = f"SELECT {columns} FROM articles"
     if only_new:
-        query += " WHERE embedded IS FALSE"  # Adjust based on your schema
+        query += " WHERE embedded IS FALSE"
 
     cursor.execute(query)
     articles = cursor.fetchall()  # list of tuples (each one is a database row)
