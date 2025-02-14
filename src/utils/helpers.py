@@ -67,60 +67,66 @@ def convert_rss(rss_list):
     return converted
 
 
-def store_to_postgres(articles):
+def store_to_postgres(articles, db_conn):
     """
     Inserts RSS articles into PostgreSQL database.
     Prevents duplicate entries using the hash.
     """
     try:
-        conn = psycopg.connect(**config.get_section("DB_USER"))
-        with conn.cursor() as cur:
-            try:
-                # Get column names dynamically from schema
-                columns = list(config.get_section("schema").keys())
-                # Create placeholders for values
-                placeholders = ", ".join(["%s"] * len(columns))
-                # Join column names for SQL query
-                col_names = ", ".join(columns)
+        cur = db_conn.cursor()
+        try:
+            # Get column names dynamically from schema
+            columns = list(config.get_section("schema").keys())
+            # Create placeholders for values
+            placeholders = ", ".join(["%s"] * len(columns))
+            # Join column names for SQL query
+            col_names = ", ".join(columns)
 
-                # Construct dynamic INSERT statement
-                insert_query = f"""
-                    INSERT INTO articles ({col_names})
-                    VALUES ({placeholders})
-                    ON CONFLICT (hash) DO NOTHING;
-                """
+            # Construct dynamic INSERT statement
+            insert_query = f"""
+                INSERT INTO articles ({col_names})
+                VALUES ({placeholders})
+                ON CONFLICT (hash) DO NOTHING;
+            """
 
-                # Execute query dynamically
-                getter = itemgetter(*columns)  # optimized getter for column order
-                values = [getter(a) for a in articles]
-                cur.executemany(insert_query, values)
+            # Execute query dynamically
+            getter = itemgetter(*columns)  # optimized getter for column order
+            values = [getter(a) for a in articles]
+            cur.executemany(insert_query, values)
+            db_conn.commit()
+            print(f"{len(values)} articles stored in PostgreSQL table.")
 
-            except Exception as e:
-                print(f"Error inserting article: {e}")
+        except Exception as e:
+            db_conn.rollback()  # Rollback the transaction on error
+            print(f"Error inserting article: {e}")
 
-        conn.commit()
-        conn.close()
-        print("Data successfully stored in PostgreSQL table.")
+        finally:
+            cur.close()
 
     except Exception as e:
         print("Database connection failed:", e)
 
 
-def load_postgres_data(data="all"):
-    """Loads data (defined by the columns) stored in PostgreSQL database."""
-    conn = psycopg.connect(**config.get_section("DB_USER"))
-    cursor = conn.cursor()
+def import_postgres_data(db_conn, data="all", only_new=False):
+    """
+    Loads data (defined by the columns) stored in PostgreSQL database.
+    only_new: if True, loads only articles that haven't been embedded.
+    """
+    cursor = db_conn.cursor()
 
     if data == "all":
         columns = "*"
     else:
         columns = ", ".join(data)
 
+    query = f"SELECT {columns} FROM articles"
+    if only_new:
+        query += " WHERE embedded IS FALSE"  # Adjust based on your schema
+
     cursor.execute(f"SELECT {columns} FROM articles;")
     articles = cursor.fetchall()  # list of tuples (each one is a database row)
     cursor.close()
-    conn.close()
-    print("Articles loaded from postgreSQL database.")
+    print("Articles imported from postgreSQL database.")
     return articles
 
 
