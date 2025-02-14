@@ -151,6 +151,7 @@ class AsyncScraper:
             if data:
                 for article in articles:
                     if article["link"] == url:
+                        print(url)
                         article.update(data)
                         break
         print("Async scraping complete.")
