@@ -7,20 +7,19 @@ This directory contains the backend code for the Company Intelligence Agent. The
 ```
 backend/
 │── init.py
-│── async_extract_data.py       # Orchestrates data extraction from RSS and web scrapers
+│── data_extraction.py          # Orchestrates the data extraction and storage
 │── async_rss_handler.py        # Handles RSS feed parsing and data retrieval
 │── async_web_scraper.py        # Web scraper for extracting data from target sites if required
+|—— embedding_pipeline.py       # Creates and stores vector embeddings in ChromaDB
 │── LLM_integration.py          # Handles interactions with the local LLM
 ```
 
 ## Key Components
 
-### 1. **Data Extraction (`async_extract_data.py`)**
+### 1. **Data Extraction (`data_extraction.py`)**
 
 - Coordinates the data retrieval process.
-- Uses `async_rss_handler.py` to fetch RSS feed data.
-- Uses `async_web_scraper.py` to scrape structured/unstructured web content if required.
-- Stores clean, standardized data in the postgreSQL database.
+- Stores clean, standardized data in the postgreSQL database, and vectorized embeddings in the ChrombaDB database by orchestrating `async_rss_handler.py`, `async_web_scraper.py`, and `embedding_pipeline.py`.
 
 ### 2. **RSS Handling (`async_rss_handler.py`)**
 
@@ -31,7 +30,11 @@ backend/
 
 - Attempts to scrape any content not obtained by the RSS handler.
 
-### 4. **LLM Integration (`LLM_integration.py`)**
+### 4. **Embedding Storage (`embedding_pipeline.py`)**
+
+- Creates and stores vector embeddings in the ChromaDB database.
+
+### 5. **LLM Integration (`LLM_integration.py`)**
 
 - Handles interactions with the local Large Language Model.
 - Uses ChrombaDB embeddings efficient querying (similarity search).

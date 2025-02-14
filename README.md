@@ -88,15 +88,14 @@ company-intelligence-agent/
    npm install
    cd ../..
    ```
-5. Initialize and populate the postgreSQL database:
+5. Set up and initialize the postgreSQL and ChromaDB databases:
    ```bash
    python scripts/postgres_init.py
-   python src/backend/async_extract_data.py
-   ```
-6. Initialize and populate the ChromaDB database:
-   ```bash
    python scripts/chroma_init.py
-   python scripts/embedding_model.py
+   ```
+6. Begin data extraction:
+   ```bash
+   python src/backend/data_extraction.py
    ```
 7. Good to go!
 
