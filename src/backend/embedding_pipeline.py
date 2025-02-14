@@ -14,7 +14,7 @@ class GenerateEmbeddings:
     def check_postgres(self):
         # Check for new articles from PostgreSQL (loads them if so)
         articles = import_postgres_data(
-            db_conn=self.db_conn, data=self.chroma["data"], only_new=False
+            db_conn=self.db_conn, data=self.chroma["data"], only_new=True
         )
 
         for article in articles:
@@ -38,7 +38,16 @@ class GenerateEmbeddings:
                 documents=[data["content"]],
                 metadatas=[metadata_dict],
             )
+
+            self.mark_as_embedded(data["hash"])
         print(f"Stored new embeddings.")
+
+    def mark_as_embedded(self, hash):
+        """Update postgres table to reflect when entry has been embedded."""
+        cursor = self.db_conn.cursor()
+        cursor.execute("UPDATE articles SET embedded = TRUE WHERE hash = %s", (hash,))
+        self.db_conn.commit()
+        cursor.close()
 
 
 if __name__ == "__main__":

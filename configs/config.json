@@ -22,7 +22,8 @@
         "published": "TIMESTAMP",
         "summary": "TEXT",
         "content": "TEXT",
-        "tags": "TEXT"
+        "tags": "TEXT",
+        "embedded": "BOOLEAN DEFAULT FALSE"
     },
 
     "chroma": {

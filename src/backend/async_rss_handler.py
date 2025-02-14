@@ -42,6 +42,11 @@ class RSSHandler:
 
                 # Loop over the desired fields in the feed
                 for field in self.schema.keys():
+
+                    # Skip bool key for the embedding check
+                    if field == "embedded":
+                        continue
+
                     value = getattr(entry, field, None)
 
                     if field == "hash":
