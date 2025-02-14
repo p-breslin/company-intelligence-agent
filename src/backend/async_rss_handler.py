@@ -88,8 +88,3 @@ class RSSHandler:
         """Checks if the given hash already exists in the postgres database."""
         self.cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
         return self.cur.fetchone() is not None
-
-    def __del__(self):
-        """Close cursor and connection when the handler is destroyed"""
-        self.cur.close()
-        self.conn.close()
