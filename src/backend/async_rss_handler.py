@@ -1,3 +1,4 @@
+import hashlib
 import feedparser
 from dateutil import parser
 from utils.config import config
@@ -18,6 +19,7 @@ class RSSHandler:
         for url in self.feeds:
             feed = feedparser.parse(url)
             source = getattr(feed.feed, "link", None)
+            hash = hashlib.md5((source).encode("utf-8")).hexdigest()
 
             # Loop through every feed entry and add data to a dict
             for entry in feed.entries:
@@ -60,9 +62,6 @@ class RSSHandler:
                             )
                         else:
                             data[field] = None
-
-                    elif field == "hash":
-                        data["hash"] = compute_hash(data["title"], data["source"])
 
                 articles.append(data)
         print(f"RSS feed data fetched. {len(self.incomplete)} articles need scraping.")

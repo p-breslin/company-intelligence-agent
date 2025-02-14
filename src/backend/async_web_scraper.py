@@ -105,12 +105,6 @@ class AsyncScraper:
                     if tag and "content" in tag.attrs:
                         article["tags"] = [x.strip() for x in tag["content"].split(",")]
 
-                # Compute hash if missing
-                if not article["hash"]:
-                    article["hash"] = compute_hash(
-                        article.get("title"), article.get("source")
-                    )
-
                 # Temporary workaround: if no content, use the summary
                 if not article["content"]:
                     article["content"] = article["summary"]
