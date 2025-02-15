@@ -23,69 +23,80 @@ class RSSHandler:
             feed = feedparser.parse(url)
             source = getattr(feed.feed, "link", None)
 
-            # Loop through every feed entry and add data to a dict
-            for entry in feed.entries:
-
-                # First check for duplicate in the databse
-                link = getattr(entry, "link", None)
-                if not link:
-                    continue
-                hash = hashlib.md5((link).encode("utf-8")).hexdigest()
-
-                # Check if this hash already exists in DB
-                if self.check_hash(hash):
-                    print("Skipping duplicate")
-                    continue
-
-                # Initialize with None values for all database fields
+            # If the URL is not an RSS feed, send to scraper
+            if not source:
                 data = {field: None for field in self.schema.keys()}
+                data["link"] = url
+                data["source"] = source
+                self.incomplete.append(url)
+                articles.append(data)
 
-                # Loop over the desired fields in the feed
-                for field in self.schema.keys():
+            else:
+                # Loop through every feed entry and add data to a dict
+                for entry in feed.entries:
 
-                    # Skip bool key for the embedding check
-                    if field == "embedded":
+                    # First check for duplicate in the databse
+                    link = getattr(entry, "link", None)
+                    if not link:
+                        continue
+                    hash = hashlib.md5((link).encode("utf-8")).hexdigest()
+
+                    # Check if this hash already exists in DB
+                    if self.check_hash(hash):
+                        print("Skipping duplicate")
                         continue
 
-                    value = getattr(entry, field, None)
+                    # Initialize with None values for all database fields
+                    data = {field: None for field in self.schema.keys()}
 
-                    if field == "hash":
-                        data[field] = hash
+                    # Loop over the desired fields in the feed
+                    for field in self.schema.keys():
 
-                    elif field == "link":
-                        data[field] = value
+                        # Skip bool key for the embedding check
+                        if field == "embedded":
+                            continue
 
-                    elif field in {"title", "author", "summary"}:
-                        data[field] = clean_html(value, feed="rss")
+                        value = getattr(entry, field, None)
 
-                    elif field == "published":
-                        try:
-                            # Parse and convert RSS date str into datetime obj
-                            data[field] = parser.parse(value) if value else None
-                        except Exception as e:
-                            print(f"Error parsing date '{value}': {e}")
+                        if field == "hash":
+                            data[field] = hash
 
-                    elif field == "source":
-                        data[field] = urlparse(source).netloc
+                        elif field == "link":
+                            data[field] = value
 
-                    elif field == "content":
-                        # Use cleaned full content; otherwise mark for scraping
-                        if hasattr(entry, field):
-                            data[field] = clean_html(entry.content[0].value, feed="rss")
-                        else:
-                            # Mark for scraping
-                            self.incomplete.append(data["link"])
+                        elif field in {"title", "author", "summary"}:
+                            data[field] = clean_html(value, feed="rss")
 
-                    elif field == "tags":
-                        if value:
-                            # Tag 1 would be value[0]["term"]
-                            data[field] = ", ".join(
-                                tag["term"] for tag in value if "term" in tag
-                            )
-                        else:
-                            data[field] = None
+                        elif field == "published":
+                            try:
+                                # Parse + convert RSS date str into datetime obj
+                                data[field] = parser.parse(value) if value else None
+                            except Exception as e:
+                                print(f"Error parsing date '{value}': {e}")
 
-                articles.append(data)
+                        elif field == "source":
+                            data[field] = urlparse(source).netloc
+
+                        elif field == "content":
+                            # Use cleaned content; otherwise mark for scraping
+                            if hasattr(entry, field):
+                                data[field] = clean_html(
+                                    entry.content[0].value, feed="rss"
+                                )
+                            else:
+                                # Mark for scraping
+                                self.incomplete.append(data["link"])
+
+                        elif field == "tags":
+                            if value:
+                                # Tag 1 would be value[0]["term"]
+                                data[field] = ", ".join(
+                                    tag["term"] for tag in value if "term" in tag
+                                )
+                            else:
+                                data[field] = None
+
+                    articles.append(data)
         print(f"RSS feed data fetched. {len(self.incomplete)} articles need scraping.")
         return articles
 
