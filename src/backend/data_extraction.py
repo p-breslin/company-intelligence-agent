@@ -5,8 +5,6 @@ from backend.async_web_scraper import AsyncScraper
 from backend.embedding_pipeline import GenerateEmbeddings
 from utils.helpers import store_to_postgres
 
-import sys
-
 
 if __name__ == "__main__":
     """
@@ -22,7 +20,11 @@ if __name__ == "__main__":
     try:
         # RSS handler
         feeds = config.get_list("feeds")
-        rss_handler = RSSHandler([feeds[3]], db_conn=conn)
+
+        ## For working example, use this feed:
+        rss_handler = RSSHandler([feeds[1]], db_conn=conn)
+
+        # rss_handler = RSSHandler([feeds[3]], db_conn=conn)
         articles = rss_handler.fetch()
 
         # Activate scraper if there is incomplete data
@@ -32,8 +34,6 @@ if __name__ == "__main__":
 
         # Save to postgreSQL database
         store_to_postgres(articles, db_conn=conn)
-
-        sys.exit()
 
         # Generate and store embeddings to ChromaDB
         embeddings = GenerateEmbeddings(db_conn=conn)
