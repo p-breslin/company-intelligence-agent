@@ -46,9 +46,12 @@
         ]
     },
 
-    "rss_feeds": [
+    "feeds": [
         "https://www.networkcomputing.com/rss.xml",
-        "https://www.fierceelectronics.com/rss/xml"
+        "https://www.fierceelectronics.com/rss/xml",
+        "https://www.lightreading.com/rss.xml",
+        "https://www.testandmeasurement.com/"
+
     ],
 
     "models": {

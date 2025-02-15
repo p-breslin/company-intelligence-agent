@@ -126,7 +126,6 @@ def import_postgres_data(db_conn, data="all", only_new=False):
         if "embedded" not in data:
             data.append("embedded")
         columns = ", ".join(data)
-        print(columns)
 
     query = f"SELECT {columns} FROM articles"
     if only_new:
