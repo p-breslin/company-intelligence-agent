@@ -14,9 +14,10 @@ src/orchestrator/__pycache__/main.cpython-313.pyc
 scripts/postgres_init.py  
 scripts/chroma_init.py  
 
-# Data and rough work directories  
+# Directories  
 data/  
 rough_work/  
+src/old/
 
 # Node.js dependencies  
 node_modules/  
