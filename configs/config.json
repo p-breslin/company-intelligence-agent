@@ -30,7 +30,7 @@
         "dbname": "database",
         "metadata": [
             "title",
-            "source",
+            "link",
             "published",
             "tags",
             "model"
@@ -39,7 +39,7 @@
             "hash",
             "content",
             "title",
-            "source",
+            "link",
             "published",
             "tags"
         ]
