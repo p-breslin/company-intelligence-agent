@@ -15,9 +15,8 @@
     },
 
     "schema": {
-        "title": "TEXT NOT NULL",
+        "title": "TEXT",
         "link": "TEXT NOT NULL",
-        "source": "TEXT NOT NULL",
         "hash": "TEXT UNIQUE NOT NULL",
         "published": "TIMESTAMP",
         "summary": "TEXT",
