@@ -17,7 +17,7 @@ scripts/chroma_init.py
 # Directories  
 data/  
 rough_work/  
-src/backend/old/
+src/backend/old
 
 # Node.js dependencies  
 node_modules/  
