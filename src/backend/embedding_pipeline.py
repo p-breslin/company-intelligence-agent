@@ -1,3 +1,4 @@
+import logging
 import chromadb
 from datetime import datetime
 from utils.config import config
@@ -41,9 +42,9 @@ class GenerateEmbeddings:
                 )
 
                 self.mark_as_embedded(data["hash"])
-            print("Stored new embeddings.")
+            logging.info("Stored new embeddings.")
         else:
-            print("No new data to embed.")
+            logging.info("No new data to embed.")
 
     def mark_as_embedded(self, hash):
         """Update postgres table to reflect when entry has been embedded."""

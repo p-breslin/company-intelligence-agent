@@ -1,7 +1,7 @@
 import re
 import html
 import hashlib
-import psycopg
+import logging
 from bs4 import BeautifulSoup
 from operator import itemgetter
 from utils.config import config

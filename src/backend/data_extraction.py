@@ -6,6 +6,15 @@ from backend.embedding_pipeline import GenerateEmbeddings
 from utils.helpers import store_to_postgres
 
 
+# Debug
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(levelname)s - %(message)s",
+)
+
+
 if __name__ == "__main__":
     """
     Unified pipeline for data extraction, storage, and embedding.
@@ -25,6 +34,7 @@ if __name__ == "__main__":
         rss_handler = RSSHandler([feeds[1]], db_conn=conn)
 
         # rss_handler = RSSHandler([feeds[3]], db_conn=conn)
+        # rss_handler = RSSHandler(["https://www.nasa.gov/news-release/"], db_conn=conn)
         articles = rss_handler.fetch()
 
         # Activate scraper if there is incomplete data

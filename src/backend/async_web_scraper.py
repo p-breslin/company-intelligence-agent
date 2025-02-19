@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
@@ -29,7 +30,7 @@ class AsyncScraper:
             delay = rp.crawl_delay("*") or 2  # Default delay if not specified
             return allowed, delay
         except Exception as e:
-            print(f"Error fetching robots.txt from {source}: {e}")
+            logging.error(f"Error fetching robots.txt from {source}: {e}")
             return True, 2  # Assume scraping is allowed with default delay
 
     async def single_scrape(self, session, url, article):
@@ -42,14 +43,16 @@ class AsyncScraper:
         if not permission:
             # print(f"Skipping {url} as per robots.txt")
             # continue
-            print("You are not respecting robots.txt...")
+            logging.warning("You are not respecting robots.txt...")
         await asyncio.sleep(delay)  # Respect crawl delay
 
         try:
             # Asynchronous context management
             async with session.get(url, headers=headers, timeout=10) as response:
                 if response.status != 200:
-                    print(f"Failed to fetch {url} - Status Code: {response.status}")
+                    logging.error(
+                        f"Failed to fetch {url} - Status Code: {response.status}"
+                    )
                     return url, None
 
                 html = await response.text()
@@ -74,16 +77,16 @@ class AsyncScraper:
                 return url, article
 
         except Exception as e:
-            print(f"Error scraping {url}: {e}")
+            logging.error(f"Error scraping {url}: {e}")
             return url, None
 
     async def scrape_articles(self, articles):
         """Asyncchronous scraping for multiple articles (all at once)."""
         if not self.incomplete:
-            print("No articles need scraping.")
+            logging.info("No articles need scraping.")
             return []
 
-        print(f"Scraping {len(self.incomplete)} articles asynchronously...")
+        logging.info(f"Scraping {len(self.incomplete)} articles asynchronously...")
 
         tasks = []
         # Create a session object to be reused for multiple HTTP requests
@@ -109,4 +112,4 @@ class AsyncScraper:
                     if article["link"] == url:
                         article.update(data)
                         break
-        print("Async scraping complete.")
+        logging.info("Async scraping complete.")
