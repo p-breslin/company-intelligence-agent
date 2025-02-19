@@ -82,8 +82,15 @@ def extract_content(soup):
 
     # 2) Look for an <article> tag
     content_tag = soup.find("article")
-    if content_tag and content_tag.get_text(strip=True):
-        return clean_html(content_tag.get_text(strip=True), feed="web")
+    if content_tag:
+
+        # Keeps spacing between paragraphs
+        paragraphs = [p.get_text(strip=True) for p in content_tag.find_all("p")]
+        if paragraphs:
+            return clean_html(" ".join(paragraphs), feed="web")
+
+        # Extract entire <article> text if no <p> tags exist
+        return clean_html(content_tag.get_text(separator=" "), feed="web")
 
     # 3) Try common content container classes
     selectors = [
@@ -98,7 +105,12 @@ def extract_content(soup):
         if container and container.get_text(strip=True):
             return clean_html(container.get_text(strip=True), feed="web")
 
-    # 4) Use entire <body> text (last resort)
+    # Extract paragraphs (<p> tags) while preserving spacing
+    paragraphs = [p.get_text(strip=True) for p in soup.find_all("p")]
+    if paragraphs:
+        return clean_html(" ".join(paragraphs), feed="web")
+
+    # 5) Use entire <body> text (last resort)
     body_tag = soup.find("body")
     if body_tag and body_tag.get_text(strip=True):
         return clean_html(body_tag.get_text(strip=True), feed="web")
