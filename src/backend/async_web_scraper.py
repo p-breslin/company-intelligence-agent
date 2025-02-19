@@ -1,10 +1,9 @@
 import asyncio
 import aiohttp
-from dateutil import parser
 from bs4 import BeautifulSoup
+from utils.scraping_utils import *
 from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
-from utils.helpers import clean_html
 
 
 class AsyncScraper:
@@ -56,54 +55,17 @@ class AsyncScraper:
                 html = await response.text()
                 soup = BeautifulSoup(html, "html.parser")
 
-                # Extract title if missing
+                # Extract missing info using functions from utils.scraping_utils
                 if not article["title"]:
-                    title_tag = soup.find("title")
-                    article["title"] = title_tag.text.strip() if title_tag else None
-
-                # Extract published date if missing
+                    article["title"] = extract_title(soup)
                 if not article["published"]:
-                    date_selectors = [
-                        {"property": "article:published_time"},
-                        {"property": "og:updated_time"},
-                        {"name": "date"},
-                        {"property": "publish_date"},
-                    ]
-                    for meta_tag in date_selectors:
-                        tag = soup.find("meta", meta_tag)
-                        if tag and tag.get("content"):
-                            try:
-                                date = parser.parse(tag["content"])
-                            except Exception as e:
-                                print(f"Error parsing date '{tag['content']}': {e}")
-                            break
-
-                # Extract content if missing
-                if not article["content"]:
-                    content_tag = soup.find("article")
-                    article["content"] = (
-                        clean_html(content_tag.text.strip(), feed="web")
-                        if content_tag
-                        else None
-                    )
-
-                # Extract summary if missing
+                    article["published"] = extract_published_date(soup)
                 if not article["summary"]:
-                    meta_tags = [
-                        {"name": "description"},
-                        {"property": "og:description"},
-                    ]
-                    for meta in meta_tags:
-                        tag = soup.find("meta", meta)
-                        if tag and "content" in tag.attrs:
-                            article["summary"] = tag["content"]
-                            break
-
-                # Extract tags if missing (TO-DO: ML CLASSIFIER)
+                    article["summary"] = extract_summary(soup)
+                if not article["content"]:
+                    article["content"] = extract_content(soup)
                 if not article["tags"]:
-                    tag = soup.find("meta", {"name": "keywords"})
-                    if tag and "content" in tag.attrs:
-                        article["tags"] = [x.strip() for x in tag["content"].split(",")]
+                    article["tags"] = extract_tags(soup)
 
                 # Temporary workaround: if no content, use the summary
                 if not article["content"]:
