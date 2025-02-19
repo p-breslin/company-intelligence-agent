@@ -22,6 +22,7 @@ class RSSHandler:
             feed = self.parse_rss_feed(url)
 
             # If URL not RSS feed, mark with domain URL and send to scraper
+            # This needs to be revised, sends homepage atm
             if not feed:
                 logging.warning(f"Invalid RSS feed: {url}")
                 data = {field: None for field in self.schema.keys()}
@@ -34,7 +35,7 @@ class RSSHandler:
             for entry in feed.entries:
                 data = {field: None for field in self.schema.keys()}
 
-                # Get article URL
+                # Get the link for the given article
                 link = getattr(entry, "link", None)
                 if not link:
                     logging.warning("RSS entry missing link.")
@@ -47,6 +48,8 @@ class RSSHandler:
                     continue
 
                 # Extract data from feed
+                data["link"] = link
+                data["hash"] = hash
                 data = self.extract_data(entry, data)
 
                 # Mark as incomplete for scraping if any info is missing
