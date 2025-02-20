@@ -1,13 +1,10 @@
+import logging
 import psycopg
 from utils.config import config
-from backend.async_rss_handler import RSSHandler
-from backend.async_web_scraper import AsyncScraper
+from backend.rss_handler import RSSHandler
+from backend.web_scraper import WebScraper
 from backend.embedding_pipeline import GenerateEmbeddings
 from utils.helpers import store_to_postgres
-
-
-# Debug
-import logging
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -33,13 +30,12 @@ if __name__ == "__main__":
         ## For working example, use this feed:
         rss_handler = RSSHandler([feeds[1]], db_conn=conn)
 
-        # rss_handler = RSSHandler([feeds[3]], db_conn=conn)
-        # rss_handler = RSSHandler(["https://www.nasa.gov/news-release/"], db_conn=conn)
+        # rss_handler = RSSHandler([feeds[2]], db_conn=conn)
         articles = rss_handler.fetch()
 
         # Activate scraper if there is incomplete data
         if rss_handler.incomplete:
-            scraper = AsyncScraper(rss_handler.incomplete)
+            scraper = WebScraper(rss_handler.incomplete)
             scraper.async_scrape(articles)
 
         # Save to postgreSQL database
