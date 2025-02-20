@@ -134,7 +134,7 @@ def import_postgres_data(db_conn, data="all", only_new=False):
     cursor.execute(query)
     articles = cursor.fetchall()  # list of tuples (each one is a database row)
     cursor.close()
-    print("Articles imported from postgreSQL database.")
+    logging.info("Articles imported from postgreSQL database.")
     return articles
 
 
