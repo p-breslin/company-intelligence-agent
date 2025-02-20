@@ -112,4 +112,5 @@ class AsyncScraper:
                     if article["link"] == url:
                         article.update(data)
                         break
+
         logging.info("Async scraping complete.")
