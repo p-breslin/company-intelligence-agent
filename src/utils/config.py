@@ -43,6 +43,12 @@ class ConfigLoader:
             raise KeyError(f"Key '{key}' not found or is not a list in config file")
         return self.config[key]
 
+    def get_value(self, key):
+        """Returns a value from the JSON config."""
+        if key not in self.config:
+            raise KeyError(f"Key '{key}' not found or is not a value in config file")
+        return self.config[key]
+
 
 # Create a global instance to be imported anywhere
 config = ConfigLoader()

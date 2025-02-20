@@ -1,8 +1,8 @@
 import feedparser
 import pandas as pd
 from utils.config import config
-from backend.async_rss_handler import RSSHandler
-from backend.async_web_scraper import AsyncScraper
+from backend.rss_handler import RSSHandler
+from backend.web_scraper import Webcraper
 
 
 class TestDataExtraction:
@@ -64,7 +64,7 @@ class TestDataExtraction:
         for entry, new_entry in zip(self.test_rss, self.test_scraper):
             new_entry["link"] = entry["link"]
 
-        scraper = AsyncScraper(incomplete)
+        scraper = Webcraper(incomplete)
         scraper.async_scrape(self.test_scraper)
 
         self.save_tables(
