@@ -7,7 +7,7 @@ from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
 
 
-class AsyncScraper:
+class WebScraper:
     def __init__(self, incomplete):
         """
         Performs web scraping asynchronously for increased efficiency.
