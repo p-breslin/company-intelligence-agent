@@ -1,109 +1,123 @@
 import base64
-import os.path
+import logging
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 class GmailScraper:
-    def __init__(self):
-        self.gmail_path = (
-            "/Users/peter/ExperienceFlow/company-intelligence-agent/Gmail/"
-        )
-
-    def authenticate_gmail(self):
-        """Authenticate and return Gmail API service instance."""
-        creds = None
+    def __init__(self, max_results=5):
+        logging.info("Initializing GmailScraper...")
 
         # Gmail API scope for read-only access
         SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+        creds = None
+        path = "/Users/peter/ExperienceFlow/company-intelligence-agent/Gmail/"
 
-        # Check if token.json exists for saved credentials
-        if os.path.exists(self.gmail_path + "token.json"):
-            creds = Credentials.from_authorized_user_file(
-                self.gmail_path + "token.json", SCOPES
-            )
+        try:
+            # Load credentials (use token.json for the saved credentials)
+            creds = Credentials.from_authorized_user_file(path + "token.json", SCOPES)
+            self.service = build("gmail", "v1", credentials=creds)
+            self.max_results = max_results
+            logging.info("Gmail API authentication successful.")
+        except Exception as e:
+            logging.error(f"Failed to authenticate Gmail API: {e}")
+            raise
 
-        return build("gmail", "v1", credentials=creds)
-
-    def fetch_emails(self, service, max_results=5):
-        """Fetch emails from Gmail."""
+    def fetch_emails(self):
+        """Fetches emails from Gmail."""
+        logging.info(f"Fetching up to {self.max_results} latest emails...")
         try:
             results = (
-                service.users()
+                self.service.users()
                 .messages()
-                .list(userId="me", maxResults=max_results, q="")
+                .list(userId="me", maxResults=self.max_results, q="")
                 .execute()
             )
             messages = results.get("messages", [])
 
             if not messages:
-                print("No emails found.")
-                return
+                logging.info("No new emails found.")
+            else:
+                logging.info(f"Retrieved {len(messages)} email(s).")
 
-            print("\nLatest Emails:\n")
-            for msg in messages:
-                msg_data = (
-                    service.users().messages().get(userId="me", id=msg["id"]).execute()
-                )
-
-                # Extract headers
-                headers = msg_data["payload"]["headers"]
-                subject = next(
-                    (h["value"] for h in headers if h["name"] == "Subject"),
-                    "No Subject",
-                )
-                sender = next(
-                    (h["value"] for h in headers if h["name"] == "From"),
-                    "Unknown Sender",
-                )
-
-                # Extract snippet (preview of email body)
-                snippet = msg_data.get("snippet", "No snippet available.")
-
-                print(f"From: {sender}")
-                print(f"Subject: {subject}")
-                print(f"Snippet: {snippet[:150]}...")
-                print("-" * 50)
+            return messages
 
         except HttpError as error:
-            print(f"An error occurred: {error}")
+            logging.error(f"Error fetching emails: {error}")
+            return []
 
-    def get_email_body(self, message):
-        """Extract and decode the email body."""
-        try:
-            parts = message.get("payload", {}).get("parts", [])
+    def get_email_body(self, messages):
+        """Extracts and decodes the email body."""
+        logging.info("Extracting email bodies...")
+        bodies = {}
 
-            for part in parts:
-                mime_type = part.get("mimeType", "")
-                body = part.get("body", {}).get("data", "")
+        for msg in messages:
+            try:
+                body = None
+                ID = msg.get("id", "unknown_id")
+                logging.info(f"Fetching full content for email ID: {ID}")
 
-                if mime_type == "text/plain":  # Plain text email
-                    return base64.urlsafe_b64decode(body).decode("utf-8")
+                # Fetch full email content using message ID
+                message = (
+                    self.service.users().messages().get(userId="me", id=ID).execute()
+                )
 
-                elif mime_type == "text/html":  # HTML email
-                    decoded_html = base64.urlsafe_b64decode(body).decode("utf-8")
-                    return BeautifulSoup(
-                        decoded_html, "html.parser"
-                    ).get_text()  # Convert HTML to plain text
+                # Extract payload (full email content)
+                payload = message.get("payload", {})
+                parts = payload.get("parts", [])
 
-            # If email is not split into parts (fallback)
-            body = message.get("payload", {}).get("body", {}).get("data", "")
-            return (
-                base64.urlsafe_b64decode(body).decode("utf-8")
-                if body
-                else "No content available."
-            )
+                # Some emails contain both plain text and HTML parts
+                for part in parts:
+                    mime_type = part.get("mimeType", "")
+                    body = part.get("body", {}).get("data", "")
 
-        except Exception as e:
-            return f"Error decoding email: {e}"
+                    # Decode plain text email
+                    if mime_type == "text/plain":
+                        body = base64.urlsafe_b64decode(body).decode("utf-8")
+                        logging.info(f"Decoded text/plain content for {ID}")
+                        break
+
+                    # Decode HTML email and convert to plain text
+                    elif mime_type == "text/html":
+                        html = base64.urlsafe_b64decode(body).decode("utf-8")
+                        body = BeautifulSoup(html, "html.parser").get_text()
+                        logging.info(f"Decoded text/html content for {ID}")
+                        break
+
+                # If not split into parts; stored directly in payload.body
+                if not body:
+                    payload_body = payload.get("body", {}).get("data", "")
+                    body = (
+                        base64.urlsafe_b64decode(payload_body).decode("utf-8")
+                        if body
+                        else "No content available."
+                    )
+                    logging.warning(f"No parts found, using fallback for {ID}")
+
+                # Store email bodies in dictionary
+                bodies[ID] = body
+
+            except Exception as e:
+                logging.error(f"Error decoding email ID {ID}: {e}")
+                bodies[ID] = f"Error decoding email: {e}"
+
+        return bodies
 
 
 if __name__ == "__main__":
-    # Authenticate and fetch the latest emails
-    scraper = GmailScraper()
-    gmail_service = scraper.authenticate_gmail()
-    scraper.fetch_emails(gmail_service, max_results=1)
+    scraper = GmailScraper(max_results=2)
+    messages = scraper.fetch_emails()
+
+    if messages:
+        bodies = scraper.get_email_body(messages)
+        for ID, body in bodies.items():
+            logging.info(f"\nMessage ID: {ID}\nBody:\n{body}\n" + "-" * 50)
+    else:
+        logging.info("No messages to process.")
