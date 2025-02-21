@@ -46,6 +46,12 @@
     },
 
     "feeds": [
+        "https://www.lightreading.com/",
+        "https://www.testandmeasurement.com/"
+
+    ],
+
+    "test_feeds": [
         "https://www.networkcomputing.com/rss.xml",
         "https://www.fierceelectronics.com/rss/xml",
         "https://www.lightreading.com/rss.xml",
