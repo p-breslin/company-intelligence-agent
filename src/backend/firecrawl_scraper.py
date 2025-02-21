@@ -229,7 +229,7 @@ class FireCrawlScraper:
 
             if links_w_hashes:
                 logging.info(f"Batch scraping {len(TEST)} articles from {feed}")
-                if len(filtered_links) < 10:
+                if len(TEST) < 10:
                     batch_articles = self.batch_scrape(links_w_hashes)
                 else:
                     batch_articles = self.batch_scrape_async(links_w_hashes)
