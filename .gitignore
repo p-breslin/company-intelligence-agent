@@ -18,6 +18,7 @@ scripts/chroma_init.py
 data/  
 rough_work/  
 src/backend/old
+Gmail/
 
 # Node.js dependencies  
 node_modules/  
