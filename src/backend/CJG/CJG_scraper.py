@@ -36,6 +36,9 @@ class CJGscraper:
             self.client = genai.Client(api_key=api_key)
             self.model = "gemini-2.0-flash-lite-preview-02-05"
 
+            # Semaphore to enforce rate limit (30 RPM for this model)
+            self.semaphore = asyncio.Semaphore(30)
+
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
             raise
@@ -52,7 +55,7 @@ class CJGscraper:
     def clean_gemini_response(self, response_text):
         """Cleans Gemini response to remove weird unwanted formatting."""
         # Remove triple backticks and optional "json" label (```json ```)
-        text = re.sub(r"^```json\s*|\s*```$", "", text.strip())
+        text = re.sub(r"^```json\s*|\s*```$", "", response_text.strip())
         return text.strip()
 
     async def get_links(self, homepage):
@@ -114,10 +117,14 @@ class CJGscraper:
             # Combine with pre-defined prompt
             query = self.prompt.format(WEBPAGE_MARKDOWN=markdown)
 
-            # Send request to Gemini asynchronously
-            response = await asyncio.to_thread(
-                self.client.models.generate_content, model=self.model, contents=query
-            )
+            # Send async requests to Gemini w/ semaphore to enforce rate limit
+            async with self.semaphore:
+                # logging.info(f"Processing article: {url}")
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model,
+                    contents=query,
+                )
 
             # Extract and clean the response text
             gemini_output = response.text
@@ -126,6 +133,7 @@ class CJGscraper:
             try:
                 # Parse JSON response
                 article_data = json.loads(cleaned)
+                article_data["link"] = url  # Attach the link
                 article_data["hash"] = article_hash  # Attach the hash
                 return article_data
             except json.JSONDecodeError as e:
@@ -153,7 +161,7 @@ class CJGscraper:
         articles = []
         links_w_hashes = {}
 
-        for feed in [self.feeds[0]]:
+        for feed in self.feeds:
             logging.info(f"Scraping links from feed: {feed}")
 
             # Scrape links from the feed asynchronously
@@ -166,7 +174,7 @@ class CJGscraper:
             filtered_links = self.filter_links(links)
 
             # Check for duplicates
-            for url in filtered_links[:3]:
+            for url in filtered_links:
                 hash = self.generate_hash(url)
                 if self.check_hash(hash):
                     logging.info(f"Skipping duplicate: {url}")
