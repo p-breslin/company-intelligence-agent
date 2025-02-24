@@ -20,6 +20,7 @@ logging.basicConfig(
 class ScraperAI:
     def __init__(self, feeds, db_conn, LLM="mistral"):
         try:
+            self.LLM = LLM
             self.feeds = feeds
             self.cur = db_conn.cursor()  # For postgreSQL set-up
 
@@ -66,10 +67,6 @@ class ScraperAI:
         query = f"SELECT hash FROM articles WHERE hash IN ({placeholders})"
         self.cur.execute(query, tuple(hashes))
         return {row[0] for row in self.cur.fetchall()}
-
-    def clean_LLM_response(self, response):
-        """Cleans LLM response to remove weird unwanted formatting."""
-        return re.sub(r"^```json\s*|\s*```$", "", response.strip()).strip()
 
     async def get_links(self, homepage):
         """Crawl the homepage and extract article URLs using Crawl4AI."""
@@ -153,32 +150,33 @@ class ScraperAI:
                     if attempt > 0:
                         logging.info(f"Attempt {attempt + 1})")
 
-                    if self.model == "gemini":
+                    if self.LLM == "gemini":
                         # asyncio.to_thread for asynchronous call
                         query = self.prompt + markdown
                         response = await asyncio.to_thread(
                             self.client.models.generate_content,
                             model=self.model,
                             contents=query,
+                            config={"response_mime_type": "application/json"},
                         )
-                        cleaned = self.clean_LLM_response(response.text)
+                        json_response = response.text
 
-                    elif self.model == "mistral":
+                    elif self.LLM == "mistral":
                         # complete_async for asynchronous call
                         query = [
                             {"role": "system", "content": f"{self.prompt}"},
                             {"role": "user", "content": f"{markdown}"},
                         ]
                         response = await self.client.chat.complete_async(
-                            model=self.model, messages=query, timeout=15
+                            model=self.model,
+                            messages=query,
+                            response_format={"type": "json_object"},
                         )
-                        cleaned = self.clean_LLM_response(
-                            response.choices[0].message.content
-                        )
+                        json_response = response.choices[0].message.content
 
                     try:
                         # Parse JSON response
-                        article_data = json.loads(cleaned)
+                        article_data = json.loads(json_response)
                         article_data.update({"link": url, "hash": hash})
                         return article_data
                     except json.JSONDecodeError as e:
