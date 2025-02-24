@@ -1,12 +1,13 @@
 import ollama
-from utils.config import config
+from utils.config import ConfigLoader
 from utils.helpers import token_count
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 class LocalLLM:
     def __init__(self, conversation_limit=5):
-        self.db = config.get_section("DB_USER")
+        self.db = ConfigLoader("config").get_section("DB_USER")
+        config = ConfigLoader("llmConfig")
         self.llm = config.get_section("models")["llama"]
         self.prompts = config.get_section("prompts")
         self.chunking = config.get_section("chunking")
