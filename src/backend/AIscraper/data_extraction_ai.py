@@ -2,8 +2,8 @@ import logging
 import psycopg
 import asyncio
 from utils.config import config
-from backend.CJG.CJG_scraper import CJGscraper
 from utils.helpers import store_to_postgres
+from backend.AIscraper.scraper_ai import ScraperAI
 from backend.embedding_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
@@ -27,7 +27,7 @@ if __name__ == "__main__":
         feeds = config.get_list("feeds")
 
         # Firecrawl scraper
-        scraper = CJGscraper(feeds, db_conn=conn)
+        scraper = ScraperAI(feeds, db_conn=conn)
         articles = asyncio.run(scraper.run_scraping())
 
         if not articles:
