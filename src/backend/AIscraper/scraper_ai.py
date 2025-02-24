@@ -38,7 +38,8 @@ class CJGscraper:
 
             # API set-up
             self.client = genai.Client(api_key=gemini_key)
-            self.model = "gemini-2.0-flash-lite-preview-02-05"
+            self.model = "gemini-2.0-flash"
+            # self.model = "gemini-2.0-flash-lite-preview-02-05"
 
             # Semaphore to enforce rate limits (Gemini: 30 RPM, Jina: 200 RPM)
             self.gemini_semaphore = asyncio.Semaphore(30)
