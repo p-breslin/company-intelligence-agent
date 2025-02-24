@@ -6,6 +6,8 @@ from utils.helpers import store_to_postgres
 from backend.AIscraper.scraper_ai import ScraperAI
 from backend.embedding_pipeline import GenerateEmbeddings
 
+import sys
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -26,9 +28,9 @@ if __name__ == "__main__":
         # List of feeds defined in config
         feeds = config.get_list("feeds")
 
-        # Firecrawl scraper
-        scraper = ScraperAI(feeds, db_conn=conn)
-        articles = asyncio.run(scraper.run_scraping())
+        # LLM scraper
+        scraper = ScraperAI(feeds, db_conn=conn, LLM="mistral")
+        articles = asyncio.run(scraper.run())
 
         if not articles:
             logging.warning("No articles were extracted. Exiting.")

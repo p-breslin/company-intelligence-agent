@@ -68,7 +68,7 @@ class ScraperAI:
         self.cur.execute(query, tuple(hashes))
         return {row[0] for row in self.cur.fetchall()}
 
-    async def get_links(self, homepage):
+    async def crawl_links(self, homepage):
         """Crawl the homepage and extract article URLs using Crawl4AI."""
         try:
             async with AsyncWebCrawler() as crawler:
@@ -85,9 +85,8 @@ class ScraperAI:
                 else:
                     print("Failed to crawl homepage")
                     return []
-
         except Exception as e:
-            logging.error(f"Unexpected error in function: {e}")
+            logging.error(f"Unexpected error crawling links: {e}")
         return []
 
     def filter_links(self, links, min_word_count=4):
@@ -126,7 +125,6 @@ class ScraperAI:
                             continue
 
                         response.raise_for_status()  # for non-200 responses
-                        self.retry_delay = 1  # Reset delay on success
                         return url, await response.text()
 
                 except Exception as e:
@@ -137,21 +135,25 @@ class ScraperAI:
         logging.error(f"Markdown fetch failed after {self.retries} retries: {url}")
         return url, None
 
-    async def scrape_single_article(self, session, url, hash):
-        """Scrapes a single article asynchronously using LLM API."""
+    async def scrape_link(self, session, url, hash):
+        """
+        Scrapes a single link asynchronously using LLM API.
+            1) Fetches markdown.
+            2) Uses LLM to extract structured info from the markdown.
+        """
         url, markdown = await self.fetch_markdown(session, url)
         if not markdown:
             return None
 
         async with self.LLM_semaphore:  # Rate limits
-            for attempt in range(self.retries):  # Retry logic
-                self.retry_delay = 1  # Reset rery delay before each attempt
-                try:
-                    if attempt > 0:
-                        logging.info(f"Attempt {attempt + 1})")
+            logging.info(f"Started LLM processing...")
 
+            for attempt in range(self.retries):  # Retry logic
+                # self.retry_delay = 1  # Reset rery delay before each attempt
+                try:
+                    logging.info(f"LLM attempt {attempt + 1}")
                     if self.LLM == "gemini":
-                        # asyncio.to_thread for asynchronous call
+                        # asyncio.to_thread required for gemini async call
                         query = self.prompt + markdown
                         response = await asyncio.to_thread(
                             self.client.models.generate_content,
@@ -162,7 +164,7 @@ class ScraperAI:
                         json_response = response.text
 
                     elif self.LLM == "mistral":
-                        # complete_async for asynchronous call
+                        # Native complete_async for Mistral's async call
                         query = [
                             {"role": "system", "content": f"{self.prompt}"},
                             {"role": "user", "content": f"{markdown}"},
@@ -183,11 +185,10 @@ class ScraperAI:
                         logging.error(f"Failed to parse JSON ({url}): {e}")
                         return None
 
-                # Retry logic
                 except Exception as e:
                     error_message = str(e)
 
-                    # Rate limits reached (429)
+                    # Rate limits
                     if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
                         logging.warning("LLM rate limit hit. Retrying..")
                         await asyncio.sleep(self.retry_delay)
@@ -200,56 +201,85 @@ class ScraperAI:
                         self.retry_delay *= 2
 
                     else:
-                        # Stop retrying if it's a permanent failure
-                        logging.error(f"Permanent error (not retried): {e}")
+                        # Stop retrying if it's a total failure
+                        logging.error(f"Failure: {e}")
                         return None
-
-        logging.error(f"Failed after {self.retries} retries: {url}")
+        self.retry_delay = 1
+        logging.error(f"Failed LLM call after {self.retries} retries: {url}")
         return None
 
-    async def process_articles(self, links_w_hashes):
-        """Processes all articles asynchronously."""
+    async def process_scraping(self, session, links_w_hashes):
+        """Processes scrapes for all links asynchronously."""
+        tasks = [
+            self.scrape_link(session, url, hash) for url, hash in links_w_hashes.items()
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        logging.info("Finished processing articles for feed.")
+        return [r for r in results if not isinstance(r, Exception)]
+
+    async def process_feed(self, feed, session):
+        """
+        Process a single feed:
+        1) Crawl homepage for links
+        2) Filter out non-article links
+        3) Check database for duplicates
+        4) Scrape links via Jina markdown and LLM call
+        """
+        logging.info(f"Scraping links from feed: {feed}")
+        links = await self.crawl_links(feed)
+
+        if not links:
+            logging.info(f"No links found for {feed}")
+            return []
+        logging.info(f"Found {len(links)} links for {feed}")
+
+        # Filter out non-article links
+        filtered = self.filter_links(links)
+        logging.info(f"Filtered down to {len(filtered)} links for {feed}")
+
+        # Check for duplicates (batch calling the hash function)
+        hashes = {url: self.generate_hash(url) for url in filtered[:20]}
+        existing_hashes = self.check_hashes(hashes.values())  # returns set
+        if existing_hashes:
+            logging.info(f"Skipping {len(existing_hashes)} duplicates for {feed}")
+        links_w_hashes = {
+            url: h for url, h in hashes.items() if h not in existing_hashes
+        }
+
+        # Process articles asynchronously if any remain
+        if links_w_hashes:
+            logging.info(f"Processing {len(links_w_hashes)} articles")
+            articles = await self.process_scraping(session, links_w_hashes)
+            logging.info(f"Finished processing articles for {feed}")
+            return articles
+
+        logging.info(f"No new articles to process for {feed}")
+        return []
+
+    async def run(self):
+        """
+        1) For each feed, fetch and process article links in parallel.
+        2) Use a single aiohttp.ClientSession for all calls.
+        3) Return all scraped articles across feeds.
+        """
         async with aiohttp.ClientSession() as session:
-            tasks = [
-                self.scrape_single_article(session, url, hash)
-                for url, hash in links_w_hashes.items()
-            ]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            return [r for r in results if not isinstance(r, Exception)]
+            # Gather tasks for each feed in parallel
+            tasks = [self.process_feed(feed, session) for feed in self.feeds]
+            results_per_feed = await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def run_scraping(self):
-        """
-        1) Scrapes all feeds for article links.
-        2) Converts link to markdown using Jina.ai reader.
-        3) Extracts article content using LLM API call.
-        """
+        # Debug: Check if any tasks are still running
+        pending = [t for t in asyncio.all_tasks() if not t.done()]
+        if pending:
+            logging.warning(f"Found {len(pending)} pending tasks: {pending}")
+            for task in pending:
+                logging.warning(f"Pending Task Details: {task}")
+
+        # Flatten the lists (and skip any exceptions)
         articles = []
-        links_w_hashes = {}
-
-        for feed in self.feeds:
-            # Scrape links from the feed asynchronously
-            logging.info(f"Scraping links from feed: {feed}")
-            links = await self.get_links(feed)
-            if not links:
-                logging.info(f"No links found for {feed}")
-                continue
-
-            # Filter out non-article links
-            filtered = self.filter_links(links)
-
-            # Check for duplicates (batch calling the hash function)
-            hashes = {url: self.generate_hash(url) for url in filtered[:5]}
-            existing_hashes = self.check_hashes(hashes.values())  # returns set
-            if existing_hashes:
-                logging.info(f"Skipping {len(existing_hashes)} duplicates")
-            links_w_hashes = {
-                url: hash for url, hash in hashes.items() if hash not in existing_hashes
-            }
-
-            # Process articles asynchronously
-            if links_w_hashes:
-                logging.info(f"Async processing {len(links_w_hashes)} articles")
-                batch_articles = await self.process_articles(links_w_hashes)
-                articles.extend(batch_articles)
+        for result in results_per_feed:
+            if isinstance(result, list):
+                articles.extend(result)
+            elif isinstance(result, Exception):
+                logging.error(f"Error in processing feed: {result}")
 
         return articles
