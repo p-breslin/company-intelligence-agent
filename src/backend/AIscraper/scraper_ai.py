@@ -60,10 +60,12 @@ class ScraperAI:
         """Generates an MD5 hash for a given link (webpage URL)."""
         return hashlib.md5(link.encode("utf-8")).hexdigest() if link else None
 
-    def check_hash(self, hash):
-        """Checks if the hash already exists in the PostgreSQL database."""
-        self.cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
-        return self.cur.fetchone() is not None
+    def check_hashes(self, hashes):
+        """Batch checks if hashes exists in the PostgreSQL database."""
+        placeholders = ", ".join(["%s"] * len(hashes))
+        query = f"SELECT hash FROM articles WHERE hash IN ({placeholders})"
+        self.cur.execute(query, tuple(hashes))
+        return {row[0] for row in self.cur.fetchall()}
 
     def clean_LLM_response(self, response):
         """Cleans LLM response to remove weird unwanted formatting."""
@@ -235,21 +237,20 @@ class ScraperAI:
                 continue
 
             # Filter out non-article links
-            filtered_links = self.filter_links(links)
+            filtered = self.filter_links(links)
 
-            # Check for duplicates
-            for url in filtered_links[:1]:
-                hash = self.generate_hash(url)
-                if self.check_hash(hash):
-                    logging.info(f"Skipping duplicate: {url}")
-                else:
-                    links_w_hashes[url] = hash
+            # Check for duplicates (batch calling the hash function)
+            hashes = {url: self.generate_hash(url) for url in filtered[:1]}
+            existing_hashes = self.check_hashes(hashes.values())  # returns set
+            if existing_hashes:
+                logging.info(f"Skipping {len(existing_hashes)} duplicates")
+            links_w_hashes = {
+                url: hash for url, hash in hashes.items() if hash not in existing_hashes
+            }
 
             # Process articles asynchronously
             if links_w_hashes:
-                logging.info(
-                    f"Processing {len(links_w_hashes)} articles asynchronously"
-                )
+                logging.info(f"Async processing {len(links_w_hashes)} articles")
                 batch_articles = await self.process_articles(links_w_hashes)
                 articles.extend(batch_articles)
 
