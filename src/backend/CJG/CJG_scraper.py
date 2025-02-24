@@ -26,18 +26,27 @@ class CJGscraper:
             config = ConfigLoader("testsConfig")
             self.prompt = config.get_value("data_extraction_prompt")
 
-            # Gemini API key
+            # Jina and Gemini API keys
             config = ConfigLoader("API_KEYS")
-            api_key = config.get_value("gemini")
-            if not api_key:
-                raise ValueError("API key is missing. Please check config.")
+            gemini_key = config.get_value("gemini")
+            self.jina_key = config.get_value("jina")
 
-            # Gemini set-up
-            self.client = genai.Client(api_key=api_key)
+            if not gemini_key:
+                raise ValueError("Gemini API key missing. Please check config.")
+            if not self.jina_key:
+                raise ValueError("Jina API key missing. Please check config.")
+
+            # API set-up
+            self.client = genai.Client(api_key=gemini_key)
             self.model = "gemini-2.0-flash-lite-preview-02-05"
 
-            # Semaphore to enforce rate limit (30 RPM for this model)
-            self.semaphore = asyncio.Semaphore(30)
+            # Semaphore to enforce rate limits (Gemini: 30 RPM, Jina: 200 RPM)
+            self.gemini_semaphore = asyncio.Semaphore(30)
+            self.markdown_semaphore = asyncio.Semaphore(10)
+
+            # Retry logic (will use an exponential backoff for the delay)
+            self.retries = 5
+            self.retry_delay = 1
 
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
@@ -97,14 +106,36 @@ class CJGscraper:
         return filtered
 
     async def fetch_markdown(self, session, url):
-        """Fetches Markdown asynchronously using Jina.ai."""
-        try:
-            async with session.get(f"https://r.jina.ai/{url}", timeout=10) as response:
-                response.raise_for_status()
-                return url, await response.text()
-        except Exception as e:
-            logging.error(f"Failed to fetch Markdown for {url}: {e}")
-            return url, None
+        """Fetches Markdown asynchronously using Jina.ai (with rate limits)"""
+
+        api_url = f"https://r.jina.ai/{url}"
+        headers = {"Authorization": f"Bearer {self.jina_key}"}
+
+        # Make calls asynchronously
+        for attempt in range(self.retries):  # Retry logic
+            async with self.markdown_semaphore:  # Rate limits
+                try:
+                    # POST request passes options; GET request fetches data only
+                    async with session.get(
+                        api_url, headers=headers, timeout=15
+                    ) as response:
+                        if response.status == 429:  # Too many requests
+                            logging.warning("Jina rate limit hit. Retrying..")
+                            await asyncio.sleep(self.retry_delay)
+                            self.retry_delay *= 2  # Exponential backoff
+                            continue
+
+                        response.raise_for_status()  # for non-200 responses
+                        return url, await response.text()
+
+                except Exception as e:
+                    logging.error(f"Failed to fetch Markdown for {url}: {e}")
+
+                    await asyncio.sleep(self.retry_delay)
+                    self.retry_delay *= 2  # Exponential backoff
+
+        logging.error(f"Markdown fetch failed after {self.retries} retries: {url}")
+        return url, None
 
     async def scrape_single_article(self, session, url, article_hash):
         """Scrapes a single article asynchronously using Gemini API."""
@@ -117,28 +148,56 @@ class CJGscraper:
             # Combine with pre-defined prompt
             query = self.prompt.format(WEBPAGE_MARKDOWN=markdown)
 
-            # Send async requests to Gemini w/ semaphore to enforce rate limit
-            async with self.semaphore:
-                # logging.info(f"Processing article: {url}")
-                response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model,
-                    contents=query,
-                )
+            for attempt in range(self.retries):  # Retry logic
+                async with self.gemini_semaphore:  # Rate limits
+                    try:
+                        logging.info(f"Processing (attempt {attempt + 1}): {url}")
+                        response = await asyncio.to_thread(
+                            self.client.models.generate_content,
+                            model=self.model,
+                            contents=query,
+                        )
 
-            # Extract and clean the response text
-            gemini_output = response.text
-            cleaned = self.clean_gemini_response(gemini_output)
+                        # Extract and clean the response text
+                        gemini_output = response.text
+                        cleaned = self.clean_gemini_response(gemini_output)
 
-            try:
-                # Parse JSON response
-                article_data = json.loads(cleaned)
-                article_data["link"] = url  # Attach the link
-                article_data["hash"] = article_hash  # Attach the hash
-                return article_data
-            except json.JSONDecodeError as e:
-                logging.error(f"Failed to parse cleaned JSON for {url}: {e}")
-                return None
+                        try:
+                            # Parse JSON response
+                            article_data = json.loads(cleaned)
+                            article_data["link"] = url  # Attach link
+                            article_data["hash"] = article_hash  # Attach hash
+                            return article_data
+                        except json.JSONDecodeError as e:
+                            logging.error(f"Failed to parse JSON ({url}): {e}")
+                            return None
+
+                    # Retry logic
+                    except Exception as e:
+                        error_message = str(e)
+
+                        # Rate limits reached (429)
+                        if (
+                            "RESOURCE_EXHAUSTED" in error_message
+                            or "429" in error_message
+                        ):
+                            logging.warning("Gemini rate limit hit. Retrying..")
+                            await asyncio.sleep(self.retry_delay)
+                            self.retry_delay *= 2  # Exponential backoff
+
+                        # Temporary issues (503, timeouts)
+                        elif "503" in error_message or "timeout" in error_message:
+                            logging.warning(f"Temporary issue. Retrying..")
+                            await asyncio.sleep(self.retry_delay)
+                            self.retry_delay *= 2
+
+                        else:
+                            # Stop retrying if it's a permanent failure
+                            logging.error(f"Permanent error (not retried): {e}")
+                            return None
+
+            logging.error(f"Failed after {self.retries} retries: {url}")
+            return None
 
         except Exception as e:
             logging.error(f"Error in function: {e}")
@@ -174,7 +233,7 @@ class CJGscraper:
             filtered_links = self.filter_links(links)
 
             # Check for duplicates
-            for url in filtered_links:
+            for url in filtered_links[:1]:
                 hash = self.generate_hash(url)
                 if self.check_hash(hash):
                     logging.info(f"Skipping duplicate: {url}")
