@@ -1,64 +1,4 @@
 {
-    "DB_USER": {
-        "dbname": "cia",
-        "user": "testusr",
-        "password": "testpwd",
-        "host": "localhost",
-        "port": 5432
-    },
-
-    "DB_SUPER": {
-        "dbname": "postgres",
-        "user": "peter",
-        "host": "localhost",
-        "port": 5432
-    },
-
-    "schema": {
-        "title": "TEXT",
-        "link": "TEXT NOT NULL",
-        "hash": "TEXT UNIQUE NOT NULL",
-        "published": "TIMESTAMP",
-        "summary": "TEXT",
-        "content": "TEXT",
-        "tags": "TEXT",
-        "embedded": "BOOLEAN DEFAULT FALSE"
-    },
-
-    "chroma": {
-        "root": "./data/chroma/",
-        "dbname": "database",
-        "metadata": [
-            "title",
-            "link",
-            "published",
-            "tags",
-            "model"
-        ],
-        "data": [
-            "hash",
-            "content",
-            "title",
-            "link",
-            "published",
-            "tags"
-        ]
-    },
-
-    "feeds": [
-        "https://www.lightreading.com/",
-        "https://www.testandmeasurement.com/"
-
-    ],
-
-    "test_feeds": [
-        "https://www.networkcomputing.com/rss.xml",
-        "https://www.fierceelectronics.com/rss/xml",
-        "https://www.lightreading.com/rss.xml",
-        "https://www.testandmeasurement.com/"
-
-    ],
-
     "models": {
         "llama": "llama3.2:1b",
         "deepseek": "deepseek-r1:1.5b",
@@ -81,6 +21,8 @@
         "test": "You are an AI assistant summarizing key insights from retrieved content based on a user's query. User Query: {user_query} Below is relevant content from a database:\n\nRetrieved Content:\n{retrieved_text}\n\nSummarize it concisely in clear sentences without introductory phrases, disclaimers, or unnecessary preamble. Provide direct, factual answers relevant to the query. If and only if the retrieved content does not contain the answer, respond ONLY with: 'The retrieved content does not contain the requested information' and nothing else. DO NOT include this phrase if any relevant information is found. Do not use markdown or any special formatting; provide plain text responses. Do not append any fallback text if relevant information is present. Generate the response based ONLY on the provided retrieved content.",
         "test_short": "You are an AI assistant summarizing key insights from retrieved content based on a user's query. User Query: {user_query} Below is relevant content from a database:\n\nRetrieved Content:\n{retrieved_text}\n\nSummarize it concisely in ONE clear sentence without introductory phrases, disclaimers, or unnecessary preamble. Provide a direct, factual answer relevant to the query. If and only if the retrieved content does not contain the answer, respond ONLY with: 'The retrieved content does not contain the requested information' and nothing else. DO NOT include this phrase if any relevant information is found. Do not use markdown or any special formatting; provide plain text responses. Do not append any fallback text if relevant information is present. Generate the response based ONLY on the provided retrieved content."
 
-    }
+    },
+
+    "data_extraction_prompt": "You are an AI assistant that specializes in extracting the essential news article content from Markdown. The Markdown text may include a lot of extra website or navigational elements (e.g., headers, menus, ads, related-links, disclaimers, etc.). Your goal is to parse out only the actual news article information and then produce a single valid JSON object with the following five keys:\n\n1. title\n   - Extract the **exact article title** without modification.\n   - Do not add extra words or attempt to rephrase it.\n2. content\n   - Extract **only the article body**, removing unrelated text such as ads, disclaimers, extra bullet lists, or redundant product details.\n   - **All paragraph breaks and newlines (`\\n`, `\\n\\n`) must be removed. The entire content should be returned as a single, uninterrupted text string. Sentences should be concatenated with a single space.**\n   - **Remove all hyperlinks, keeping only the plain text. Do not include any markdown link syntax (e.g., `[text](url)`).**\n3. summary\n   - Generate a **concise, factual summary** in **exactly three to four sentences**.\n   - **Ensure the summary captures the article’s key points without marketing fluff**.\n   - Include any **important numbers, statistics, or key product information**.\n   - Do not use subjective opinions—only summarize factual information.\n   - **If a product or feature list is present, summarize it instead of listing it verbatim.**\n4. tags\n   - A **short list of exactly five** relevant keywords/topics describing the article.\n   - You can infer these from the article’s subject matter.\n  - If no relevant tags can be determined, return an **empty list (`[]`)**.\n5. published\n   - Extract the **publication date** in **ISO 8601 format** (e.g., \"2025-02-21T18:50:40Z\" or \"2025-02-21\" if the exact time is unknown).\n   - Ensure the output format is directly parsable by `dateutil.parser.parse` in Python.\n   - If the publication date is **not available or cannot be determined**, return `null` instead of omitting the field.\n\nTasks:\n1. **Identify the main article title** (do not modify it).\n2. **Extract the body text of the article** (excluding unnecessary elements like footnotes or disclaimers).\n3. **Generate a concise summary** (strictly 3-4 sentences, no marketing fluff, summarize lists instead of copying them).\n4. **Identify or infer five specific tags/keywords**.\n5. **Extract the publication date in ISO format** (set to `null` if not found).\n6. **Output a valid JSON object** with the keys `title`, `content`, `summary`, `tags`, and `published` **in that exact order**.\n\nImportant Requirements:\n- **Return only raw JSON data. Do not format it using markdown, do not include triple backticks (````json` or `````) or any other formatting.**\n- Do not wrap the JSON in any additional text, explanations, or formatting.\n- Do not include any additional commentary, explanation, or keys not listed (only `title`, `content`, `summary`, `tags`, and `published`).\n- **Ensure that the content field has no `\\n` or `\\n\\n` characters; all paragraphs should be merged into a single flowing text with a single space between sentences.**\n- **Remove all hyperlinks, keeping only the plain text.**\n- **Ensure `tags` are specific and relevant to the article, not just general categories.**\n- **Ensure the extracted `title` remains unchanged from the original.**\n- **Ensure the extracted `summary` avoids unnecessary product marketing details but retains critical information.**\n- **Ensure the extracted `published` date is accurate or return `null` if unavailable.**\n\nBelow is the Markdown you need to parse:\n\n"
 
 }
