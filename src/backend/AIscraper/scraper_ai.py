@@ -18,6 +18,10 @@ logging.basicConfig(
 
 
 class ScraperAI:
+    # Semaphores (for rate limits) are class-level to share among all instances
+    LLM_semaphore = asyncio.Semaphore(3)
+    Jina_semaphore = asyncio.Semaphore(3)
+
     def __init__(self, feeds, db_conn, LLM="mistral"):
         try:
             self.LLM = LLM
@@ -44,10 +48,6 @@ class ScraperAI:
                 self.client = genai.Client(api_key=llm_key)
             if LLM == "mistral":
                 self.client = Mistral(api_key=llm_key)
-
-            # Semaphore to enforce rate limits (RPM)
-            self.LLM_semaphore = asyncio.Semaphore(30)
-            self.Jina_semaphore = asyncio.Semaphore(10)
 
             # Retry logic (will use an exponential backoff for the delay)
             self.retries = 5
@@ -113,13 +113,12 @@ class ScraperAI:
         headers = {"Authorization": f"Bearer {self.jina_key}"}
 
         # Make calls asynchronously
-        for attempt in range(self.retries):  # Retry logic
-            async with self.Jina_semaphore:  # Rate limits
+        async with self.Jina_semaphore:  # Rate limits
+            for attempt in range(self.retries):  # Retry logic
+                self.retry_delay = 1  # Reset rery delay before each attempt
                 try:
                     # POST request passes options; GET request fetches data only
-                    async with session.get(
-                        api_url, headers=headers, timeout=15
-                    ) as response:
+                    async with session.get(api_url, headers=headers) as response:
                         if response.status == 429:  # Too many requests
                             logging.warning("Jina rate limit hit. Retrying..")
                             await asyncio.sleep(self.retry_delay)
@@ -144,8 +143,9 @@ class ScraperAI:
         if not markdown:
             return None
 
-        for attempt in range(self.retries):  # Retry logic
-            async with self.LLM_semaphore:  # Rate limits
+        async with self.LLM_semaphore:  # Rate limits
+            for attempt in range(self.retries):  # Retry logic
+                self.retry_delay = 1  # Reset rery delay before each attempt
                 try:
                     if attempt > 0:
                         logging.info(f"Attempt {attempt + 1})")
@@ -238,7 +238,7 @@ class ScraperAI:
             filtered = self.filter_links(links)
 
             # Check for duplicates (batch calling the hash function)
-            hashes = {url: self.generate_hash(url) for url in filtered[:1]}
+            hashes = {url: self.generate_hash(url) for url in filtered[:5]}
             existing_hashes = self.check_hashes(hashes.values())  # returns set
             if existing_hashes:
                 logging.info(f"Skipping {len(existing_hashes)} duplicates")
