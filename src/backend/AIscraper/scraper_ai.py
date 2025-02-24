@@ -5,6 +5,7 @@ import aiohttp
 import hashlib
 import logging
 from google import genai
+from mistralai import Mistral
 from crawl4ai import AsyncWebCrawler
 from utils.config import ConfigLoader
 
@@ -13,37 +14,39 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-"""Scraper using Crawl4AI with Jina.ai and Gemini API."""
+"""Scraper using Crawl4AI with Jina.ai and an LLM API."""
 
 
-class CJGscraper:
-    def __init__(self, feeds, db_conn):
+class ScraperAI:
+    def __init__(self, feeds, db_conn, LLM="mistral"):
         try:
             self.feeds = feeds
             self.cur = db_conn.cursor()  # For postgreSQL set-up
 
             # Pre-defined LLM prompt
-            config = ConfigLoader("testsConfig")
+            config = ConfigLoader("llmConfig")
             self.prompt = config.get_value("data_extraction_prompt")
+            self.model = config.get_section("models")[LLM]
 
-            # Jina and Gemini API keys
+            # API keys
             config = ConfigLoader("API_KEYS")
-            gemini_key = config.get_value("gemini")
-            self.jina_key = config.get_value("jina")
+            self.jina_key = config.get_value("jina")  # Jina.ai reader
+            llm_key = config.get_value(LLM)  # LLM API key
 
-            if not gemini_key:
-                raise ValueError("Gemini API key missing. Please check config.")
+            if not llm_key:
+                raise ValueError("LLM API key missing. Please check config.")
             if not self.jina_key:
                 raise ValueError("Jina API key missing. Please check config.")
 
-            # API set-up
-            self.client = genai.Client(api_key=gemini_key)
-            self.model = "gemini-2.0-flash"
-            # self.model = "gemini-2.0-flash-lite-preview-02-05"
+            # LLM client set-up
+            if LLM == "gemini":
+                self.client = genai.Client(api_key=llm_key)
+            if LLM == "mistral":
+                self.client = Mistral(api_key=llm_key)
 
-            # Semaphore to enforce rate limits (Gemini: 30 RPM, Jina: 200 RPM)
-            self.gemini_semaphore = asyncio.Semaphore(30)
-            self.markdown_semaphore = asyncio.Semaphore(10)
+            # Semaphore to enforce rate limits (RPM)
+            self.LLM_semaphore = asyncio.Semaphore(30)
+            self.Jina_semaphore = asyncio.Semaphore(10)
 
             # Retry logic (will use an exponential backoff for the delay)
             self.retries = 5
@@ -62,11 +65,9 @@ class CJGscraper:
         self.cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
         return self.cur.fetchone() is not None
 
-    def clean_gemini_response(self, response_text):
-        """Cleans Gemini response to remove weird unwanted formatting."""
-        # Remove triple backticks and optional "json" label (```json ```)
-        text = re.sub(r"^```json\s*|\s*```$", "", response_text.strip())
-        return text.strip()
+    def clean_LLM_response(self, response):
+        """Cleans LLM response to remove weird unwanted formatting."""
+        return re.sub(r"^```json\s*|\s*```$", "", response.strip()).strip()
 
     async def get_links(self, homepage):
         """Crawl the homepage and extract article URLs using Crawl4AI."""
@@ -114,7 +115,7 @@ class CJGscraper:
 
         # Make calls asynchronously
         for attempt in range(self.retries):  # Retry logic
-            async with self.markdown_semaphore:  # Rate limits
+            async with self.Jina_semaphore:  # Rate limits
                 try:
                     # POST request passes options; GET request fetches data only
                     async with session.get(
@@ -127,104 +128,107 @@ class CJGscraper:
                             continue
 
                         response.raise_for_status()  # for non-200 responses
+                        self.retry_delay = 1  # Reset delay on success
                         return url, await response.text()
 
                 except Exception as e:
                     logging.error(f"Failed to fetch Markdown for {url}: {e}")
-
                     await asyncio.sleep(self.retry_delay)
                     self.retry_delay *= 2  # Exponential backoff
 
         logging.error(f"Markdown fetch failed after {self.retries} retries: {url}")
         return url, None
 
-    async def scrape_single_article(self, session, url, article_hash):
-        """Scrapes a single article asynchronously using Gemini API."""
-        try:
-            # Fetch Markdown asynchronously
-            url, markdown = await self.fetch_markdown(session, url)
-            if not markdown:
-                return None
+    async def scrape_single_article(self, session, url, hash):
+        """Scrapes a single article asynchronously using LLM API."""
+        url, markdown = await self.fetch_markdown(session, url)
+        if not markdown:
+            return None
 
-            # Combine with pre-defined prompt
-            query = self.prompt.format(WEBPAGE_MARKDOWN=markdown)
+        for attempt in range(self.retries):  # Retry logic
+            async with self.LLM_semaphore:  # Rate limits
+                try:
+                    if attempt > 0:
+                        logging.info(f"Attempt {attempt + 1})")
 
-            for attempt in range(self.retries):  # Retry logic
-                async with self.gemini_semaphore:  # Rate limits
-                    try:
-                        logging.info(f"Processing (attempt {attempt + 1}): {url}")
+                    if self.model == "gemini":
+                        # asyncio.to_thread for asynchronous call
+                        query = self.prompt + markdown
                         response = await asyncio.to_thread(
                             self.client.models.generate_content,
                             model=self.model,
                             contents=query,
                         )
+                        cleaned = self.clean_LLM_response(response.text)
 
-                        # Extract and clean the response text
-                        gemini_output = response.text
-                        cleaned = self.clean_gemini_response(gemini_output)
+                    elif self.model == "mistral":
+                        # complete_async for asynchronous call
+                        query = [
+                            {"role": "system", "content": f"{self.prompt}"},
+                            {"role": "user", "content": f"{markdown}"},
+                        ]
+                        response = await self.client.chat.complete_async(
+                            model=self.model, messages=query, timeout=15
+                        )
+                        cleaned = self.clean_LLM_response(
+                            response.choices[0].message.content
+                        )
 
-                        try:
-                            # Parse JSON response
-                            article_data = json.loads(cleaned)
-                            article_data["link"] = url  # Attach link
-                            article_data["hash"] = article_hash  # Attach hash
-                            return article_data
-                        except json.JSONDecodeError as e:
-                            logging.error(f"Failed to parse JSON ({url}): {e}")
-                            return None
+                    try:
+                        # Parse JSON response
+                        article_data = json.loads(cleaned)
+                        article_data.update({"link": url, "hash": hash})
+                        return article_data
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse JSON ({url}): {e}")
+                        return None
 
-                    # Retry logic
-                    except Exception as e:
-                        error_message = str(e)
+                # Retry logic
+                except Exception as e:
+                    error_message = str(e)
 
-                        # Rate limits reached (429)
-                        if (
-                            "RESOURCE_EXHAUSTED" in error_message
-                            or "429" in error_message
-                        ):
-                            logging.warning("Gemini rate limit hit. Retrying..")
-                            await asyncio.sleep(self.retry_delay)
-                            self.retry_delay *= 2  # Exponential backoff
+                    # Rate limits reached (429)
+                    if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
+                        logging.warning("LLM rate limit hit. Retrying..")
+                        await asyncio.sleep(self.retry_delay)
+                        self.retry_delay *= 2  # Exponential backoff
 
-                        # Temporary issues (503, timeouts)
-                        elif "503" in error_message or "timeout" in error_message:
-                            logging.warning(f"Temporary issue. Retrying..")
-                            await asyncio.sleep(self.retry_delay)
-                            self.retry_delay *= 2
+                    # Temporary issues (503, timeouts)
+                    elif "503" in error_message or "timeout" in error_message:
+                        logging.warning(f"Temporary issue. Retrying..")
+                        await asyncio.sleep(self.retry_delay)
+                        self.retry_delay *= 2
 
-                        else:
-                            # Stop retrying if it's a permanent failure
-                            logging.error(f"Permanent error (not retried): {e}")
-                            return None
+                    else:
+                        # Stop retrying if it's a permanent failure
+                        logging.error(f"Permanent error (not retried): {e}")
+                        return None
 
-            logging.error(f"Failed after {self.retries} retries: {url}")
-            return None
-
-        except Exception as e:
-            logging.error(f"Error in function: {e}")
-            return None
+        logging.error(f"Failed after {self.retries} retries: {url}")
+        return None
 
     async def process_articles(self, links_w_hashes):
         """Processes all articles asynchronously."""
         async with aiohttp.ClientSession() as session:
             tasks = [
-                self.scrape_single_article(session, url, article_hash)
-                for url, article_hash in links_w_hashes.items()
+                self.scrape_single_article(session, url, hash)
+                for url, hash in links_w_hashes.items()
             ]
-            return await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            return [r for r in results if not isinstance(r, Exception)]
 
     async def run_scraping(self):
         """
         1) Scrapes all feeds for article links.
-        2) Extracts article content asynchronously.
+        2) Converts link to markdown using Jina.ai reader.
+        3) Extracts article content using LLM API call.
         """
         articles = []
         links_w_hashes = {}
 
         for feed in self.feeds:
-            logging.info(f"Scraping links from feed: {feed}")
-
             # Scrape links from the feed asynchronously
+            logging.info(f"Scraping links from feed: {feed}")
             links = await self.get_links(feed)
             if not links:
                 logging.info(f"No links found for {feed}")
