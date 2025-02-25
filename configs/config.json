@@ -46,9 +46,26 @@
     },
 
     "feeds": [
-        "https://www.lightreading.com/",
-        "https://www.testandmeasurement.com/"
-
+        "https://www.lightreading.com",
+        "https://www.testandmeasurement.com",
+        "https://www.evaluationengineering.com",
+        "https://www.electronicdesign.com", 
+        "https://www.eetimes.com", 
+        "https://www.sdxcentral.com", 
+        "https://www.rcrwireless.com",
+        "https://www.fiercetelecom.com", 
+        "https://www.telecomramblings.com", 
+        "https://www.networkcomputing.com",
+        "https://www.frost.com",
+        "https://www.gartner.com", 
+        "https://www.idc.com",
+        "https://www.abiresearch.com",
+        "https://www.ieee.org", 
+        "https://www.mordorintelligence.com", 
+        "https://www.marketresearchintellect.com", 
+        "https://www.gminsights.com",
+        "https://www.giiresearch.com", 
+        "https://www.forrester.com/bold" 
     ],
 
     "test_feeds": [
