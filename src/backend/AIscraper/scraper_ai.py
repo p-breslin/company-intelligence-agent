@@ -2,12 +2,12 @@ import re
 import json
 import asyncio
 import aiohttp
-import hashlib
 import logging
 from google import genai
 from mistralai import Mistral
 from crawl4ai import AsyncWebCrawler
 from utils.config import ConfigLoader
+from utils.helpers import generate_hash, check_hash
 
 # Configure logging
 logging.basicConfig(
@@ -17,11 +17,30 @@ logging.basicConfig(
 """Scraper using Crawl4AI with Jina.ai and an LLM API."""
 
 
-class ScraperAI:
-    # Semaphores (for rate limits) are class-level to share among all instances
-    LLM_semaphore = asyncio.Semaphore(3)
-    Jina_semaphore = asyncio.Semaphore(3)
+class RateLimiter:
+    """Time-based rate limiter to handle API request."""
 
+    def __init__(self, max_rpm: int):
+        self.interval = 60.0 / max_rpm  # seconds between calls
+        self.last_call = 0.0
+        self.lock = asyncio.Lock()  # ensures only one task updates last_call
+
+    async def wait_for_slot(self):
+        """Wait until enough time has passed since the last request."""
+        async with self.lock:
+            now = asyncio.get_event_loop().time()
+            elapsed = now - self.last_call  # seconds since last call
+            wait_time = self.interval - elapsed
+
+            # Sleep if wait needed
+            if wait_time > 0:
+                await asyncio.sleep(wait_time)
+
+            # Record a fresh call time
+            self.last_call = asyncio.get_event_loop().time()
+
+
+class ScraperAI:
     def __init__(self, feeds, db_conn, LLM="mistral"):
         try:
             self.LLM = LLM
@@ -51,22 +70,14 @@ class ScraperAI:
 
             # Retry logic (will use an exponential backoff for the delay)
             self.retries = 5
-            self.retry_delay = 1
+
+            # Rate limiters (RPM)
+            self.jina_limiter = RateLimiter(10)
+            self.llm_limiter = RateLimiter(30)
 
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
             raise
-
-    def generate_hash(self, link):
-        """Generates an MD5 hash for a given link (webpage URL)."""
-        return hashlib.md5(link.encode("utf-8")).hexdigest() if link else None
-
-    def check_hashes(self, hashes):
-        """Batch checks if hashes exists in the PostgreSQL database."""
-        placeholders = ", ".join(["%s"] * len(hashes))
-        query = f"SELECT hash FROM articles WHERE hash IN ({placeholders})"
-        self.cur.execute(query, tuple(hashes))
-        return {row[0] for row in self.cur.fetchall()}
 
     async def crawl_links(self, homepage):
         """Crawl the homepage and extract article URLs using Crawl4AI."""
@@ -83,7 +94,7 @@ class ScraperAI:
                     ]
                     return article_links
                 else:
-                    print("Failed to crawl homepage")
+                    logging.warning(f"Failed to crawl homepage: {homepage}")
                     return []
         except Exception as e:
             logging.error(f"Unexpected error crawling links: {e}")
@@ -111,101 +122,106 @@ class ScraperAI:
         api_url = f"https://r.jina.ai/{url}"
         headers = {"Authorization": f"Bearer {self.jina_key}"}
 
-        # Make calls asynchronously
-        async with self.Jina_semaphore:  # Rate limits
-            for attempt in range(self.retries):  # Retry logic
-                self.retry_delay = 1  # Reset rery delay before each attempt
-                try:
-                    # POST request passes options; GET request fetches data only
-                    async with session.get(api_url, headers=headers) as response:
-                        if response.status == 429:  # Too many requests
-                            logging.warning("Jina rate limit hit. Retrying..")
-                            await asyncio.sleep(self.retry_delay)
-                            self.retry_delay *= 2  # Exponential backoff
-                            continue
+        # We'll do up to self.retries attempts with exponential backoff
+        retry_delay = 1  # Reset retry delay before each url
+        for attempt in range(1, self.retries + 1):
+            await self.jina_limiter.wait_for_slot()  # Wait for rate slot
 
-                        response.raise_for_status()  # for non-200 responses
-                        return url, await response.text()
+            try:
+                # POST request passes options; GET request fetches data only
+                async with session.get(api_url, headers=headers) as response:
+                    # Retry logic
+                    if response.status == 429:  # Too many requests
+                        logging.warning("Jina rate limit hit. Retrying..")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
 
-                except Exception as e:
-                    logging.error(f"Failed to fetch Markdown for {url}: {e}")
-                    await asyncio.sleep(self.retry_delay)
-                    self.retry_delay *= 2  # Exponential backoff
+                    response.raise_for_status()  # for non-200 responses
+                    markdown = await response.text()
+                    return url, markdown
 
-        logging.error(f"Markdown fetch failed after {self.retries} retries: {url}")
+            # Retry fallback
+            except Exception as e:
+                logging.error(f"Failed to fetch Markdown for {url}: {e}")
+                if attempt < self.retries:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+
+        # If all retries exhausted
+        logging.error(f"Markdown fetch failed after retries for: {url}")
         return url, None
 
     async def scrape_link(self, session, url, hash):
         """
-        Scrapes a single link asynchronously using LLM API.
-            1) Fetches markdown.
-            2) Uses LLM to extract structured info from the markdown.
+        Scrapes a single link asynchronously:
+            1) Fetches markdown using Jina reader.
+            2) Calls LLM to extract structured info from the markdown.
         """
         url, markdown = await self.fetch_markdown(session, url)
         if not markdown:
             return None
 
-        async with self.LLM_semaphore:  # Rate limits
-            logging.info(f"Started LLM processing...")
+        # Attempt LLM calls with exponential backoff
+        retry_delay = 1
+        for attempt in range(1, self.retries + 1):
+            await self.llm_limiter.wait_for_slot()
+            logging.info(f"LLM call: attempt {attempt}")
 
-            for attempt in range(self.retries):  # Retry logic
-                # self.retry_delay = 1  # Reset rery delay before each attempt
+            # Construct query and pass to LLM
+            try:
+                if self.LLM == "gemini":
+                    query = self.prompt + markdown
+                    # No native async call for Gemini so must run in a thread
+                    response = await asyncio.to_thread(
+                        self.client.models.generate_content,
+                        model=self.model,
+                        contents=query,
+                        config={"response_mime_type": "application/json"},
+                    )
+                    json_response = response.text
+
+                elif self.LLM == "mistral":
+                    query = [
+                        {"role": "system", "content": f"{self.prompt}"},
+                        {"role": "user", "content": f"{markdown}"},
+                    ]
+                    # Native method for Mistral's async call
+                    response = await self.client.chat.complete_async(
+                        model=self.model,
+                        messages=query,
+                        response_format={"type": "json_object"},
+                    )
+                    json_response = response.choices[0].message.content
+
+                # Attempt to parse the JSON response
                 try:
-                    logging.info(f"LLM attempt {attempt + 1}")
-                    if self.LLM == "gemini":
-                        # asyncio.to_thread required for gemini async call
-                        query = self.prompt + markdown
-                        response = await asyncio.to_thread(
-                            self.client.models.generate_content,
-                            model=self.model,
-                            contents=query,
-                            config={"response_mime_type": "application/json"},
-                        )
-                        json_response = response.text
+                    article = json.loads(json_response)
+                    # Add url link and hash (and check for published errors)
+                    article.update({"link": url, "hash": hash})
+                    article["published"] = article.get("published", "unknown")
+                    return article
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse JSON for ({url}): {e}")
+                    return None
 
-                    elif self.LLM == "mistral":
-                        # Native complete_async for Mistral's async call
-                        query = [
-                            {"role": "system", "content": f"{self.prompt}"},
-                            {"role": "user", "content": f"{markdown}"},
-                        ]
-                        response = await self.client.chat.complete_async(
-                            model=self.model,
-                            messages=query,
-                            response_format={"type": "json_object"},
-                        )
-                        json_response = response.choices[0].message.content
+            except Exception as e:
+                error_message = str(e)
 
-                    try:
-                        # Parse JSON response
-                        article_data = json.loads(json_response)
-                        article_data.update({"link": url, "hash": hash})
-                        return article_data
-                    except json.JSONDecodeError as e:
-                        logging.error(f"Failed to parse JSON ({url}): {e}")
-                        return None
+                # Rate limits or temporary issues (503, timeouts)
+                if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
+                    logging.warning("LLM rate limit hit (429). Retrying..")
+                elif "503" in error_message or "timeout" in error_message:
+                    logging.warning("503/timeout issue. Retrying..")
+                else:
+                    logging.error(f"Non-retriable failure: {e}")
+                    return None
 
-                except Exception as e:
-                    error_message = str(e)
+                if attempt < self.retries:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
 
-                    # Rate limits
-                    if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
-                        logging.warning("LLM rate limit hit. Retrying..")
-                        await asyncio.sleep(self.retry_delay)
-                        self.retry_delay *= 2  # Exponential backoff
-
-                    # Temporary issues (503, timeouts)
-                    elif "503" in error_message or "timeout" in error_message:
-                        logging.warning(f"Temporary issue. Retrying..")
-                        await asyncio.sleep(self.retry_delay)
-                        self.retry_delay *= 2
-
-                    else:
-                        # Stop retrying if it's a total failure
-                        logging.error(f"Failure: {e}")
-                        return None
-        self.retry_delay = 1
-        logging.error(f"Failed LLM call after {self.retries} retries: {url}")
+        logging.error(f"Failed LLM call after after retries for: {url}")
         return None
 
     async def process_scraping(self, session, links_w_hashes):
@@ -214,8 +230,9 @@ class ScraperAI:
             self.scrape_link(session, url, hash) for url, hash in links_w_hashes.items()
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        logging.info("Finished processing articles for feed.")
-        return [r for r in results if not isinstance(r, Exception)]
+        return [
+            r for r in results if not isinstance(r, Exception)
+        ]  # filters out exceptions
 
     async def process_feed(self, feed, session):
         """
@@ -237,24 +254,25 @@ class ScraperAI:
         filtered = self.filter_links(links)
         logging.info(f"Filtered down to {len(filtered)} links for {feed}")
 
-        # Check for duplicates (batch calling the hash function)
-        hashes = {url: self.generate_hash(url) for url in filtered[:20]}
-        existing_hashes = self.check_hashes(hashes.values())  # returns set
-        if existing_hashes:
-            logging.info(f"Skipping {len(existing_hashes)} duplicates for {feed}")
+        # Check for duplicates by generating and checking hashes
+        hashes = {url: generate_hash(url) for url in filtered[:1]}
+        stored_hashes = check_hash(self.cur, hashes.values())  # returns a set
+        if stored_hashes:
+            logging.info(f"Skipping {len(stored_hashes)} duplicates for {feed}")
+
+        # Filter out duplicates if necessary
         links_w_hashes = {
-            url: h for url, h in hashes.items() if h not in existing_hashes
+            url: hash for url, hash in hashes.items() if hash not in stored_hashes
         }
+        if not links_w_hashes:
+            logging.info(f"No new articles to process for {feed}")
+            return []
 
-        # Process articles asynchronously if any remain
-        if links_w_hashes:
-            logging.info(f"Processing {len(links_w_hashes)} articles")
-            articles = await self.process_scraping(session, links_w_hashes)
-            logging.info(f"Finished processing articles for {feed}")
-            return articles
-
-        logging.info(f"No new articles to process for {feed}")
-        return []
+        # Process articles
+        logging.info(f"Processing {len(links_w_hashes)} articles from {feed}")
+        articles = await self.process_scraping(session, links_w_hashes)
+        logging.info(f"Finished processing articles for {feed}")
+        return articles
 
     async def run(self):
         """
@@ -267,14 +285,7 @@ class ScraperAI:
             tasks = [self.process_feed(feed, session) for feed in self.feeds]
             results_per_feed = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Debug: Check if any tasks are still running
-        pending = [t for t in asyncio.all_tasks() if not t.done()]
-        if pending:
-            logging.warning(f"Found {len(pending)} pending tasks: {pending}")
-            for task in pending:
-                logging.warning(f"Pending Task Details: {task}")
-
-        # Flatten the lists (and skip any exceptions)
+        # Flatten all results (and skip any exceptions)
         articles = []
         for result in results_per_feed:
             if isinstance(result, list):
