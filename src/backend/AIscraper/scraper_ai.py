@@ -77,6 +77,9 @@ class ScraperAI:
             self.jina_limiter = RateLimiter(10)
             self.llm_limiter = RateLimiter(10)
 
+            # Concurrency limit: only allows N calls at once
+            self.semaphore = asyncio.Semaphore(2)
+
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
             raise
@@ -163,81 +166,84 @@ class ScraperAI:
             1) Fetches markdown using Jina reader.
             2) Calls LLM to extract structured info from the markdown.
         """
-        url, markdown = await self.fetch_markdown(session, url)
-        if not markdown:
-            return None
+        # The concurrency limit ensures we don't do more than N calls at once
+        async with self.semaphore:
+            # 1) Wait for Jina rate slot, then call Jina (in fetch_markdown)
+            url, markdown = await self.fetch_markdown(session, url)
+            if not markdown:
+                return None
 
-        # Attempt LLM calls with exponential backoff
-        retry_delay = 1
-        for attempt in range(1, self.retries + 1):
-            await self.llm_limiter.wait_for_slot()
-            logging.info(f"LLM call: attempt {attempt}")
+            # 2) Wait for LLM rate slot, then call LLM with exponential backoff
+            retry_delay = 1
+            for attempt in range(1, self.retries + 1):
+                await self.llm_limiter.wait_for_slot()
+                logging.info(f"LLM call: attempt {attempt}")
 
-            # Construct query and pass to LLM
-            try:
-                if self.LLM == "gemini":
-                    query = self.prompt + markdown
-                    # No native async call for Gemini so must run in a thread
-                    response = await asyncio.to_thread(
-                        self.client.models.generate_content,
-                        model=self.model,
-                        contents=query,
-                        config={"response_mime_type": "application/json"},
-                    )
-                    json_response = response.text
-
-                elif self.LLM == "mistral":
-                    try:
-                        query = [
-                            {"role": "system", "content": f"{self.prompt}"},
-                            {"role": "user", "content": f"{markdown}"},
-                        ]
-                        # Native method for Mistral's async call
-                        response = await asyncio.wait_for(
-                            self.client.chat.complete_async(
-                                model=self.model,
-                                messages=query,
-                                response_format={"type": "json_object"},
-                            ),
-                            timeout=30,
-                        )
-                    except asyncio.TimeoutError:
-                        logging.error("LLM request timed out. Retrying...")
-                        continue
-                    json_response = response.choices[0].message.content
-
-                # Attempt to parse the JSON response
+                # Construct query and pass to LLM
                 try:
-                    article = json.loads(json_response)
-                    article.update({"link": url, "hash": hash})
+                    if self.LLM == "gemini":
+                        query = self.prompt + markdown
+                        # No native async call for Gemini so must run in a thread
+                        response = await asyncio.to_thread(
+                            self.client.models.generate_content,
+                            model=self.model,
+                            contents=query,
+                            config={"response_mime_type": "application/json"},
+                        )
+                        json_response = response.text
 
-                    # LLM sometimes fails here
-                    if article.get("published") is None:
-                        article["published"] = "unknown"
-                    return article
+                    elif self.LLM == "mistral":
+                        try:
+                            query = [
+                                {"role": "system", "content": f"{self.prompt}"},
+                                {"role": "user", "content": f"{markdown}"},
+                            ]
+                            # Native method for Mistral's async call
+                            response = await asyncio.wait_for(
+                                self.client.chat.complete_async(
+                                    model=self.model,
+                                    messages=query,
+                                    response_format={"type": "json_object"},
+                                ),
+                                timeout=30,
+                            )
+                        except asyncio.TimeoutError:
+                            logging.error("LLM request timed out. Retrying...")
+                            continue
+                        json_response = response.choices[0].message.content
 
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse JSON for ({url}): {e}")
-                    return None
+                    # Attempt to parse the JSON response
+                    try:
+                        article = json.loads(json_response)
+                        article.update({"link": url, "hash": hash})
 
-            except Exception as e:
-                error_message = str(e)
+                        # LLM sometimes fails here
+                        if article.get("published") is None:
+                            article["published"] = "unknown"
+                        return article
 
-                # Rate limits or temporary issues (503, timeouts)
-                if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
-                    logging.warning("LLM rate limit hit (429). Retrying..")
-                elif "503" in error_message or "timeout" in error_message:
-                    logging.warning("503/timeout issue. Retrying..")
-                else:
-                    logging.error(f"Non-retriable failure: {e}")
-                    return None
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse JSON for ({url}): {e}")
+                        return None
 
-                if attempt < self.retries:
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
+                except Exception as e:
+                    error_message = str(e)
 
-        logging.error(f"Failed LLM call after after retries for: {url}")
-        return None
+                    # Rate limits or temporary issues (503, timeouts)
+                    if "RESOURCE_EXHAUSTED" in error_message or "429" in error_message:
+                        logging.warning("LLM rate limit hit (429). Retrying..")
+                    elif "503" in error_message or "timeout" in error_message:
+                        logging.warning("503/timeout issue. Retrying..")
+                    else:
+                        logging.error(f"Non-retriable failure: {e}")
+                        return None
+
+                    if attempt < self.retries:
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2
+
+            logging.error(f"Failed LLM call after after retries for: {url}")
+            return None
 
     async def process_scraping(self, session, links_w_hashes):
         """Processes scrapes for all links asynchronously."""
