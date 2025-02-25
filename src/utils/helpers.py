@@ -8,10 +8,25 @@ from utils.config import config
 from urllib.parse import urlparse, urlunparse
 
 
-def compute_hash(title, url):
-    """Hashes title + base domain; ensures consistency across RSS & scraping."""
-    base_domain = urlparse(url).netloc  # Extracts the domain
-    return hashlib.md5((title + base_domain).encode("utf-8")).hexdigest()
+def generate_hash(link):
+    """Generates an MD5 hash for a given link (webpage URL)."""
+    return hashlib.md5(link.encode("utf-8")).hexdigest() if link else None
+
+
+def check_hash(cur, hashes):
+    """Checks if hash(es) exists in the PostgreSQL database."""
+
+    # Single hash check
+    if len(hashes) > 1:
+        cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
+        return cur.fetchone() is not None
+
+    # Batch check for list of hashes
+    else:
+        placeholders = ", ".join(["%s"] * len(hashes))
+        query = f"SELECT hash FROM articles WHERE hash IN ({placeholders})"
+        cur.execute(query, tuple(hashes))
+        return {row[0] for row in cur.fetchall()}
 
 
 def clean_html(raw_html, feed="rss"):
