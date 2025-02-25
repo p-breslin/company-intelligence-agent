@@ -15,18 +15,22 @@ def generate_hash(link):
 
 def check_hash(cur, hashes):
     """Checks if hash(es) exists in the PostgreSQL database."""
+    if not hashes:
+        return set()  # always return a set
 
-    # Single hash check
+    # Batch check if many hashes
     if len(hashes) > 1:
-        cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
-        return cur.fetchone() is not None
-
-    # Batch check for list of hashes
-    else:
         placeholders = ", ".join(["%s"] * len(hashes))
         query = f"SELECT hash FROM articles WHERE hash IN ({placeholders})"
         cur.execute(query, tuple(hashes))
         return {row[0] for row in cur.fetchall()}
+
+    # Single hash check
+    else:
+        hash = next(iter(hashes))  # hashes is passed as dict_values
+        cur.execute("SELECT 1 FROM articles WHERE hash = %s LIMIT 1", (hash,))
+        result = cur.fetchone()
+        return {result[0]} if result else set()
 
 
 def clean_html(raw_html, feed="rss"):
