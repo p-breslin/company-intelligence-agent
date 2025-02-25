@@ -34,6 +34,8 @@ class RateLimiter:
 
             # Sleep if wait needed
             if wait_time > 0:
+                logging.debug(f"RateLimiter sleeping for {wait_time:.2f}s")
+                self.last_call = now  # prevents race conditions
                 await asyncio.sleep(wait_time)
 
             # Record a fresh call time
@@ -69,11 +71,11 @@ class ScraperAI:
                 self.client = Mistral(api_key=llm_key)
 
             # Retry logic (will use an exponential backoff for the delay)
-            self.retries = 5
+            self.retries = 3
 
             # Rate limiters (RPM)
             self.jina_limiter = RateLimiter(10)
-            self.llm_limiter = RateLimiter(30)
+            self.llm_limiter = RateLimiter(10)
 
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
@@ -129,12 +131,15 @@ class ScraperAI:
 
             try:
                 # POST request passes options; GET request fetches data only
-                async with session.get(api_url, headers=headers) as response:
+                async with session.get(
+                    api_url, headers=headers, timeout=15
+                ) as response:
                     # Retry logic
                     if response.status == 429:  # Too many requests
                         logging.warning("Jina rate limit hit. Retrying..")
                         await asyncio.sleep(retry_delay)
-                        retry_delay *= 2  # Exponential backoff
+                        # Cap exponential backoff at 10s
+                        retry_delay *= 2
                         continue
 
                     response.raise_for_status()  # for non-200 responses
@@ -182,25 +187,35 @@ class ScraperAI:
                     json_response = response.text
 
                 elif self.LLM == "mistral":
-                    query = [
-                        {"role": "system", "content": f"{self.prompt}"},
-                        {"role": "user", "content": f"{markdown}"},
-                    ]
-                    # Native method for Mistral's async call
-                    response = await self.client.chat.complete_async(
-                        model=self.model,
-                        messages=query,
-                        response_format={"type": "json_object"},
-                    )
+                    try:
+                        query = [
+                            {"role": "system", "content": f"{self.prompt}"},
+                            {"role": "user", "content": f"{markdown}"},
+                        ]
+                        # Native method for Mistral's async call
+                        response = await asyncio.wait_for(
+                            self.client.chat.complete_async(
+                                model=self.model,
+                                messages=query,
+                                response_format={"type": "json_object"},
+                            ),
+                            timeout=30,
+                        )
+                    except asyncio.TimeoutError:
+                        logging.error("LLM request timed out. Retrying...")
+                        continue
                     json_response = response.choices[0].message.content
 
                 # Attempt to parse the JSON response
                 try:
                     article = json.loads(json_response)
-                    # Add url link and hash (and check for published errors)
                     article.update({"link": url, "hash": hash})
-                    article["published"] = article.get("published", "unknown")
+
+                    # LLM sometimes fails here
+                    if article.get("published") is None:
+                        article["published"] = "unknown"
                     return article
+
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse JSON for ({url}): {e}")
                     return None
@@ -229,10 +244,22 @@ class ScraperAI:
         tasks = [
             self.scrape_link(session, url, hash) for url, hash in links_w_hashes.items()
         ]
+        # Filters out exceptions
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        return [
-            r for r in results if not isinstance(r, Exception)
-        ]  # filters out exceptions
+
+        # Skip exceptions, None types, and empty dicts
+        valid = []
+        for r in results:
+            if isinstance(r, Exception):
+                logging.error(f"Exception encountered: {r}")
+                continue
+            if r is None:
+                continue
+            if not isinstance(r, dict) or not r:
+                logging.warning(f"Invalid article detected, skipping: {r}")
+                continue
+            valid.append(r)  # Otherwise it's a valid non-empty dict
+        return valid
 
     async def process_feed(self, feed, session):
         """
@@ -255,7 +282,7 @@ class ScraperAI:
         logging.info(f"Filtered down to {len(filtered)} links for {feed}")
 
         # Check for duplicates by generating and checking hashes
-        hashes = {url: generate_hash(url) for url in filtered[:1]}
+        hashes = {url: generate_hash(url) for url in filtered[:2]}
         stored_hashes = check_hash(self.cur, hashes.values())  # returns a set
         if stored_hashes:
             logging.info(f"Skipping {len(stored_hashes)} duplicates for {feed}")
