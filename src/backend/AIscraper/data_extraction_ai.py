@@ -6,8 +6,6 @@ from utils.helpers import store_to_postgres
 from backend.AIscraper.scraper_ai import ScraperAI
 from backend.embedding_pipeline import GenerateEmbeddings
 
-import sys
-
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -35,12 +33,15 @@ if __name__ == "__main__":
         if not articles:
             logging.warning("No articles were extracted. Exiting.")
         else:
-            logging.info(f"Extracted {len(articles)} articles. Storing to database...")
+            logging.info(
+                f"Extracted {len(articles)} articles. Storing to postgres database..."
+            )
 
             # Save to postgreSQL database
             store_to_postgres(articles, db_conn=conn)
 
             # Generate and store embeddings to ChromaDB
+            logging.info("Storing to ChromaDB...")
             embeddings = GenerateEmbeddings(db_conn=conn)
             embeddings.check_postgres()
 
