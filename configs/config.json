@@ -51,14 +51,11 @@
         "https://www.evaluationengineering.com",
         "https://www.electronicdesign.com", 
         "https://www.eetimes.com", 
-        "https://www.sdxcentral.com", 
         "https://www.rcrwireless.com",
         "https://www.fiercetelecom.com", 
-        "https://www.telecomramblings.com", 
         "https://www.networkcomputing.com",
         "https://www.frost.com",
         "https://www.gartner.com", 
-        "https://www.idc.com",
         "https://www.abiresearch.com",
         "https://www.mordorintelligence.com", 
         "https://www.marketresearchintellect.com", 
@@ -72,7 +69,10 @@
         "https://www.fierceelectronics.com/rss/xml",
         "https://www.lightreading.com/rss.xml",
         "https://www.testandmeasurement.com/",
-        "https://www.ieee.org"
+        "https://www.ieee.org",
+        "https://www.telecomramblings.com",
+        "https://www.idc.com",
+        "https://www.sdxcentral.com"
 
     ],
 
