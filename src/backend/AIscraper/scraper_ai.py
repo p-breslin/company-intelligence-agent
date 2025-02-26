@@ -8,12 +8,6 @@ from utils.config import ConfigLoader
 from backend.crawler import CrawlLinks
 from utils.helpers import generate_hash, check_hash
 
-import sys
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 """Scraper using Crawl4AI with Jina.ai and an LLM API."""
 
@@ -143,7 +137,7 @@ class ScraperAI:
             retry_delay = 1
             for attempt in range(1, self.retries + 1):
                 await self.llm_limiter.wait_for_slot()
-                logging.info(f"LLM call: attempt {attempt}")
+                logging.debug(f"LLM call: attempt {attempt}")
 
                 # Construct query and pass to LLM
                 try:
@@ -171,7 +165,7 @@ class ScraperAI:
                                     messages=query,
                                     response_format={"type": "json_object"},
                                 ),
-                                timeout=30,
+                                timeout=45,
                             )
                         except asyncio.TimeoutError:
                             logging.error("LLM request timed out. Retrying...")
@@ -183,9 +177,9 @@ class ScraperAI:
                         article = json.loads(json_response)
                         article.update({"link": url, "hash": hash})
 
-                        # LLM sometimes fails here
-                        if article.get("published") is None:
-                            article["published"] = "0000-01-01T00:00:00Z"
+                        # LLM sometimes fails here (2000 as an example)
+                        if article.get("published") in [None, "null"]:
+                            article["published"] = "2000-01-01T00:00:00Z"
                         return article
 
                     except json.JSONDecodeError as e:
@@ -243,9 +237,9 @@ class ScraperAI:
         # Crawl feed
         links = await self.crawler.run(feed)
         if not links:
-            logging.info(f"No valid articles found for {feed}")
+            logging.warning(f"No valid articles found for {feed}")
             return []
-        logging.info(f"Found {len(links)} links for {feed}")
+        logging.debug(f"Found {len(links)} links for {feed}")
 
         # Check for duplicates by generating and checking hashes
         hashes = {url: generate_hash(url) for url in links}
@@ -262,10 +256,10 @@ class ScraperAI:
             return []
 
         # Process articles
-        logging.info(f"Processing {len(links_w_hashes)} articles from {feed}")
+        logging.debug(f"Processing {len(links_w_hashes)} articles from {feed}")
         articles = await self.process_scraping(session, links_w_hashes)
         if not articles:
-            logging.info(f"No valid articles were scraped from {feed}")
+            logging.warning(f"No valid articles were scraped from {feed}")
             return []
         logging.info(f"Finished processing articles for {feed}")
         return articles
