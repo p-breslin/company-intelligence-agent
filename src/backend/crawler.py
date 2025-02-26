@@ -77,6 +77,18 @@ class CrawlLinks:
             end = link.rstrip("/").split("/")[-1]  # Last segment of the URL
             words = re.split(r"[-_]", end)  # Split on hyphens or underscores
 
+            # Skip if any ignored word appears in the last segment
+            ignored_words = {
+                "and",
+                "register",
+                "signup",
+                "login",
+                "terms",
+                "contact",
+            }
+            if any(word.lower() in ignored_words for word in words):
+                continue
+
             # Count words (allowing words with numbers)
             word_count = sum(1 for w in words if re.match(r"^[a-zA-Z0-9]+$", w))
 
@@ -103,12 +115,14 @@ class CrawlLinks:
             filtered_article_links = self.final_filter(article_links)
 
             # Picking first five (hopefully the latest?)
-            filtered_articles.extend(filtered_article_links[:1])
+            filtered_articles.extend(filtered_article_links[5:8])
 
         # Remove base domain urls if any remain
         filtered_articles = [
             item for item in filtered_articles if item not in filtered_links
         ]
+        # Remove dupes
+        filtered_articles = list(set(filtered_articles))
         articles.extend(filtered_articles)
 
         return articles
