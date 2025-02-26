@@ -1,12 +1,11 @@
-import re
 import json
 import asyncio
 import aiohttp
 import logging
 from google import genai
 from mistralai import Mistral
-from crawl4ai import AsyncWebCrawler
 from utils.config import ConfigLoader
+from backend.crawler import CrawlLinks
 from utils.helpers import generate_hash, check_hash
 
 # Configure logging
@@ -35,7 +34,6 @@ class RateLimiter:
             # Sleep if wait needed
             if wait_time > 0:
                 logging.debug(f"RateLimiter sleeping for {wait_time:.2f}s")
-                self.last_call = now  # prevents race conditions
                 await asyncio.sleep(wait_time)
 
             # Record a fresh call time
@@ -48,6 +46,9 @@ class ScraperAI:
             self.LLM = LLM
             self.feeds = feeds
             self.cur = db_conn.cursor()  # For postgreSQL set-up
+
+            # Initialize crawler module
+            self.crawler = CrawlLinks()
 
             # Pre-defined LLM prompt
             config = ConfigLoader("llmConfig")
@@ -83,43 +84,6 @@ class ScraperAI:
         except Exception as e:
             logging.error(f"Failed to initialize: {e}")
             raise
-
-    async def crawl_links(self, homepage):
-        """Crawl the homepage and extract article URLs using Crawl4AI."""
-        try:
-            async with AsyncWebCrawler() as crawler:
-                result = await crawler.arun(url=homepage)
-
-                # Extract only relevant links
-                if result.success:
-                    article_links = [
-                        link["href"]
-                        for link in result.links.get("internal", [])
-                        if link["href"].startswith(homepage)
-                    ]
-                    return article_links
-                else:
-                    logging.warning(f"Failed to crawl homepage: {homepage}")
-                    return []
-        except Exception as e:
-            logging.error(f"Unexpected error crawling links: {e}")
-        return []
-
-    def filter_links(self, links, min_word_count=4):
-        """Determines if link is likely an article based on its last segment."""
-        filtered = []
-        for link in links:
-            end = link.rstrip("/").split("/")[-1]  # last segment of the URL
-            words = re.split(r"[-_]", end)  # split on hyphens / underscores
-
-            # Count words (allowing words with numbers)
-            word_count = sum(1 for w in words if re.match(r"^[a-zA-Z0-9]+$", w))
-
-            # Must have at least min_word_count
-            if word_count >= min_word_count:
-                filtered.append(link)
-
-        return filtered
 
     async def fetch_markdown(self, session, url):
         """Fetches Markdown asynchronously using Jina.ai (with rate limits)"""
@@ -270,25 +234,30 @@ class ScraperAI:
     async def process_feed(self, feed, session):
         """
         Process a single feed:
-        1) Crawl homepage for links
-        2) Filter out non-article links
-        3) Check database for duplicates
-        4) Scrape links via Jina markdown and LLM call
+        1) Crawl homepage for links and filter to specific article links
+        2) Check database for duplicates
+        3) Scrape links via Jina markdown and LLM call
         """
         logging.info(f"Scraping links from feed: {feed}")
-        links = await self.crawl_links(feed)
 
+        # First crawl: extracts links from base domain
+        links = await self.crawler.crawl_links(feed)
         if not links:
             logging.info(f"No links found for {feed}")
             return []
         logging.info(f"Found {len(links)} links for {feed}")
 
-        # Filter out non-article links
-        filtered = self.filter_links(links)
-        logging.info(f"Filtered down to {len(filtered)} links for {feed}")
+        # Initial filter: filters links to pages we care about
+        links = self.crawler.initial_filter(links)
+
+        # Second crawl: extracts links from pages we care about
+        links = await self.crawler.crawl_links(links)
+
+        # Final filter: filters links to articles we care about
+        links = self.crawler.final_filter(links)
 
         # Check for duplicates by generating and checking hashes
-        hashes = {url: generate_hash(url) for url in filtered[:2]}
+        hashes = {url: generate_hash(url) for url in links}
         stored_hashes = check_hash(self.cur, hashes.values())  # returns a set
         if stored_hashes:
             logging.info(f"Skipping {len(stored_hashes)} duplicates for {feed}")
