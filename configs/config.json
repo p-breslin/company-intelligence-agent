@@ -60,19 +60,19 @@
         "https://www.gartner.com", 
         "https://www.idc.com",
         "https://www.abiresearch.com",
-        "https://www.ieee.org", 
         "https://www.mordorintelligence.com", 
         "https://www.marketresearchintellect.com", 
         "https://www.gminsights.com",
         "https://www.giiresearch.com", 
-        "https://www.forrester.com/bold" 
+        "https://www.forrester.com" 
     ],
 
     "test_feeds": [
         "https://www.networkcomputing.com/rss.xml",
         "https://www.fierceelectronics.com/rss/xml",
         "https://www.lightreading.com/rss.xml",
-        "https://www.testandmeasurement.com/"
+        "https://www.testandmeasurement.com/",
+        "https://www.ieee.org"
 
     ],
 
