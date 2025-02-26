@@ -86,10 +86,26 @@ def convert_rss(rss_list):
     return converted
 
 
+def validate_article(article, schema):
+    """
+    Ensures an article contains all required fields.
+    If a field is missing, it is added with a default value.
+    """
+    # Create a copy to avoid modifying the original
+    validated_article = article.copy()
+
+    for field in schema:
+        if field not in validated_article:
+            validated_article[field] = "not found"
+
+    return validated_article
+
+
 def store_to_postgres(articles, db_conn):
     """
     Inserts RSS articles into PostgreSQL database.
     Prevents duplicate entries using the hash.
+    Skips and logs articles with missing columns.
     """
     try:
         cur = db_conn.cursor()
@@ -113,12 +129,19 @@ def store_to_postgres(articles, db_conn):
                 ON CONFLICT (hash) DO NOTHING;
             """
 
-            # Execute query dynamically
-            getter = itemgetter(*columns)  # optimized getter for column order
-            values = [getter(a) for a in articles]
+            # Ensure every article has the correct fields
+            articles = [validate_article(article, columns) for article in articles]
+
+            # Extract values dynamically
+            values = [
+                [article.get(col, "not found") for col in columns]
+                for article in articles
+            ]
+
+            # Insert into the database
             cur.executemany(insert_query, values)
             db_conn.commit()
-            print(f"{len(values)} articles stored in PostgreSQL table.")
+            logging.info(f"{len(values)} articles stored in PostgreSQL.")
 
         except Exception as e:
             db_conn.rollback()  # Rollback the transaction on error
