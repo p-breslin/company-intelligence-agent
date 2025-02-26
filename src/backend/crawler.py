@@ -1,14 +1,12 @@
 import re
 import logging
-import asyncio
-from utils.config import config
 from urllib.parse import urlparse
 from crawl4ai import AsyncWebCrawler
 
 
 class CrawlLinks:
     def __init__(self):
-        self.feeds = config.get_list("feeds")
+        pass
 
     async def crawl_links(self, domain):
         """Crawl the domain and extract article URLs using Crawl4AI."""
@@ -50,6 +48,8 @@ class CrawlLinks:
             "news-and-resources",
             "market-analysis",
             "whatsnew.shtml",
+            "artificial-intelligence-ai",
+            "analyst-angle",
         ]
 
         matches = []
@@ -85,23 +85,30 @@ class CrawlLinks:
 
         return filtered
 
-    async def run(self):
+    async def run(self, feed):
         articles = []
-        for feed in self.feeds:
-            links = await self.crawl_links(feed)
-            filtered_links = self.initial_filter(links)
 
-            filtered_articles = []
-            for link in filtered_links:
-                article_links = await self.crawl_links(link)
-                filtered_article_links = self.final_filter(article_links)
-                # Picking first five (maybe the latest?)
-                filtered_articles.extend(filtered_article_links[:5])
+        # First crawl: extracts links from base domain
+        links = await self.crawl_links(feed)
 
-            # Remove base domain urls if any remain
-            filtered_articles = [
-                item for item in filtered_articles if item not in filtered_links
-            ]
-            articles.extend(filtered_articles)
+        # Initial filter: filters links to pages we care about
+        filtered_links = self.initial_filter(links)
+
+        filtered_articles = []
+        for link in filtered_links:
+            # Second crawl: extracts links from pages we care about
+            article_links = await self.crawl_links(link)
+
+            # Final filter: filters links to articles we care about
+            filtered_article_links = self.final_filter(article_links)
+
+            # Picking first five (hopefully the latest?)
+            filtered_articles.extend(filtered_article_links[:1])
+
+        # Remove base domain urls if any remain
+        filtered_articles = [
+            item for item in filtered_articles if item not in filtered_links
+        ]
+        articles.extend(filtered_articles)
 
         return articles
