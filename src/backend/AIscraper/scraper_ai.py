@@ -8,6 +8,8 @@ from utils.config import ConfigLoader
 from backend.crawler import CrawlLinks
 from utils.helpers import generate_hash, check_hash
 
+import sys
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -183,7 +185,7 @@ class ScraperAI:
 
                         # LLM sometimes fails here
                         if article.get("published") is None:
-                            article["published"] = "unknown"
+                            article["published"] = "0000-01-01T00:00:00Z"
                         return article
 
                     except json.JSONDecodeError as e:
@@ -223,9 +225,7 @@ class ScraperAI:
             if isinstance(r, Exception):
                 logging.error(f"Exception encountered: {r}")
                 continue
-            if r is None:
-                continue
-            if not isinstance(r, dict) or not r:
+            if not r or not isinstance(r, dict) or not r.keys():
                 logging.warning(f"Invalid article detected, skipping: {r}")
                 continue
             valid.append(r)  # Otherwise it's a valid non-empty dict
@@ -240,21 +240,12 @@ class ScraperAI:
         """
         logging.info(f"Scraping links from feed: {feed}")
 
-        # First crawl: extracts links from base domain
-        links = await self.crawler.crawl_links(feed)
+        # Crawl feed
+        links = await self.crawler.run(feed)
         if not links:
-            logging.info(f"No links found for {feed}")
+            logging.info(f"No valid articles found for {feed}")
             return []
         logging.info(f"Found {len(links)} links for {feed}")
-
-        # Initial filter: filters links to pages we care about
-        links = self.crawler.initial_filter(links)
-
-        # Second crawl: extracts links from pages we care about
-        links = await self.crawler.crawl_links(links)
-
-        # Final filter: filters links to articles we care about
-        links = self.crawler.final_filter(links)
 
         # Check for duplicates by generating and checking hashes
         hashes = {url: generate_hash(url) for url in links}
@@ -273,6 +264,9 @@ class ScraperAI:
         # Process articles
         logging.info(f"Processing {len(links_w_hashes)} articles from {feed}")
         articles = await self.process_scraping(session, links_w_hashes)
+        if not articles:
+            logging.info(f"No valid articles were scraped from {feed}")
+            return []
         logging.info(f"Finished processing articles for {feed}")
         return articles
 
@@ -290,9 +284,16 @@ class ScraperAI:
         # Flatten all results (and skip any exceptions)
         articles = []
         for result in results_per_feed:
-            if isinstance(result, list):
-                articles.extend(result)
-            elif isinstance(result, Exception):
-                logging.error(f"Error in processing feed: {result}")
+            if isinstance(result, Exception):
+                logging.error(f"Error processing a feed: {result}")
+                continue  # Skip feed errors
 
+            if not isinstance(result, list):
+                logging.warning(f"Unexpected non-list result from a feed: {result}")
+                continue  # Skip non-list results
+
+            articles.extend(result)  # Add valid articles
+
+        # Final safeguard: ensure no None or empty dicts in final output
+        articles = [a for a in articles if isinstance(a, dict) and a.keys()]
         return articles
