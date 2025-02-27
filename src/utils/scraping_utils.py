@@ -83,7 +83,6 @@ def extract_content(soup):
     # 2) Look for an <article> tag
     content_tag = soup.find("article")
     if content_tag:
-
         # Keeps spacing between paragraphs
         paragraphs = [p.get_text(strip=True) for p in content_tag.find_all("p")]
         if paragraphs:
@@ -130,7 +129,7 @@ def extract_tags(soup):
     if meta_news_keys and meta_news_keys.get("content"):
         return [kw.strip() for kw in meta_news_keys["content"].split(",")]
 
-    return None
+    return "not found"
 
 
 def extract_json_ld(soup):
