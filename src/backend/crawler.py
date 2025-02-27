@@ -115,7 +115,7 @@ class CrawlLinks:
             filtered_article_links = self.final_filter(article_links)
 
             # Picking first five (hopefully the latest?)
-            filtered_articles.extend(filtered_article_links[5:8])
+            filtered_articles.extend(filtered_article_links)
 
         # Remove base domain urls if any remain
         filtered_articles = [
