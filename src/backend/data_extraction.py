@@ -25,12 +25,11 @@ if __name__ == "__main__":
 
     try:
         # RSS handler
-        feeds = config.get_list("feeds")
+        feeds = config.get_list("test_feeds")
 
         ## For working example, use this feed:
-        rss_handler = RSSHandler([feeds[1]], db_conn=conn)
+        rss_handler = RSSHandler([feeds[0]], db_conn=conn)
 
-        # rss_handler = RSSHandler([feeds[2]], db_conn=conn)
         articles = rss_handler.fetch()
 
         # Activate scraper if there is incomplete data
