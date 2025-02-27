@@ -65,10 +65,11 @@
     ],
 
     "test_feeds": [
-        "https://www.networkcomputing.com/rss.xml",
         "https://www.fierceelectronics.com/rss/xml",
-        "https://www.lightreading.com/rss.xml",
-        "https://www.testandmeasurement.com/",
+        "https://www.lightreading.com/rss.xml"
+    ],
+
+    "problem_feeds": [
         "https://www.ieee.org",
         "https://www.telecomramblings.com",
         "https://www.idc.com",
