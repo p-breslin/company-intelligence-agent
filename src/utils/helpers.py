@@ -3,7 +3,6 @@ import html
 import hashlib
 import logging
 from bs4 import BeautifulSoup
-from operator import itemgetter
 from utils.config import config
 from urllib.parse import urlparse, urlunparse
 
