@@ -45,6 +45,28 @@
         ]
     },
 
+    "weaviate": {
+        "port": 8080,
+        "dbname": "ArticleEmbeddings",
+        "schema": [
+             { "name": "title", "dataType": "text", "skip": true },
+             { "name": "hash", "dataType": "text", "skip": true },
+             { "name": "link", "dataType": "text", "skip": true },
+             { "name": "published", "dataType": "date", "skip": true },
+             { "name": "tags", "dataType": "text[]", "skip": true },
+             { "name": "content", "dataType": "text", "skip": false }
+        ]
+      },
+
+    "weaviate_fields": [
+        "title",
+        "hash",
+        "link",
+        "published",
+        "tags",
+        "content"
+    ],
+
     "feeds": [
         "https://www.lightreading.com",
         "https://www.testandmeasurement.com",
