@@ -1,18 +1,34 @@
+import logging
 import weaviate
 from utils.config import config
 
-config = config.get_section("weaviate")
-client = weaviate.connect_to_local(port=8080)
-print(client.is_ready())
-
-articles = client.collections.get(config["dbname"])
-response = articles.query.near_text(
-    query="How much has QuEra Computing raised in financing", limit=2
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s",
 )
 
+config = config.get_section("weaviate")
+
 try:
-    for obj in response.objects:
-        print(obj.properties["title"])
+    client = weaviate.connect_to_local(port=config["port"])
+    logging.info(client.is_ready())
+
+    try:
+        articles = client.collections.get(config["dbname"])
+
+        try:
+            response = articles.query.near_text(
+                query="How much has QuEra Computing raised in financing", limit=2
+            )
+
+            for obj in response.objects:
+                print(obj.properties["title"])
+
+        except Exception as e:
+            logging.error(f"Failed to run embedding search: {e}")
+
+    except Exception as e:
+        logging.error(f"Failed to obtain collection: {e}")
 
 finally:
     client.close()
