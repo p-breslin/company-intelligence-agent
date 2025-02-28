@@ -2,10 +2,9 @@ import subprocess
 
 # Define the scripts to run
 scripts = [
-    "scripts/postgres_clear.py",
-    "scripts/postgres_setup.py",
-    "scripts/chroma_clear.py",
-    "scripts/chroma_setup.py",
+    "scripts/postgres/postgres_clear.py",
+    "scripts/postgres/postgres_setup.py",
+    "scripts/weaviate/weaviate_clear.py",
 ]
 
 # Run each script
