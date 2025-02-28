@@ -4,8 +4,8 @@ import aiohttp
 import logging
 from google import genai
 from mistralai import Mistral
+from .crawler import CrawlLinks
 from utils.config import ConfigLoader
-from backend.crawler import CrawlLinks
 from utils.helpers import generate_hash, check_hash
 
 

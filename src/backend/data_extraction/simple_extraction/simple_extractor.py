@@ -1,10 +1,10 @@
 import logging
 import psycopg
 from utils.config import config
-from backend.rss_handler import RSSHandler
-from backend.web_scraper import WebScraper
-from backend.embedding_pipeline import GenerateEmbeddings
+from .rss_handler import RSSHandler
+from .simple_scraper import WebScraper
 from utils.helpers import store_to_postgres
+from backend.embedding_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.DEBUG,

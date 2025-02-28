@@ -2,8 +2,8 @@ import logging
 import psycopg
 import asyncio
 from utils.config import config
+from .smart_scraper import ScraperAI
 from utils.helpers import store_to_postgres
-from backend.AIscraper.scraper_ai import ScraperAI
 from backend.embedding_pipeline import GenerateEmbeddings
 
 import json

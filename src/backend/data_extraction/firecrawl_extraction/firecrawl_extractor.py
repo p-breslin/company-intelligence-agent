@@ -2,7 +2,7 @@ import logging
 import psycopg
 from utils.config import config
 from utils.helpers import store_to_postgres
-from backend.firecrawl_scraper import FireCrawlScraper
+from .firecrawl_scraper import FireCrawlScraper
 from backend.embedding_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
