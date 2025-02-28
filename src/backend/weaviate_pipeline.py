@@ -9,7 +9,6 @@ class GenerateEmbeddings:
     def __init__(self, db_conn):
         self.db_conn = db_conn
         self.config = config.get_section("weaviate")
-        self.fields = config.get_list("weaviate_fields")  # data to embed
 
         # Connect to self-hosted Weaviate instance
         self.client = weaviate.connect_to_local(port=self.config["port"])
@@ -46,7 +45,7 @@ class GenerateEmbeddings:
         """
         articles = import_postgres_data(
             db_conn=self.db_conn,
-            data=self.fields,
+            data=self.config["fields"],
             only_new=True,
         )
 
@@ -54,7 +53,7 @@ class GenerateEmbeddings:
             collection = self.client.collections.get(self.collection_name)
             with collection.batch.dynamic() as batch:
                 for article in articles:
-                    data = dict(zip(self.fields, article))
+                    data = dict(zip(self.config["fields"], article))
 
                     # Ensure tags is a list
                     if "tags" in data and isinstance(data["tags"], str):

@@ -55,17 +55,16 @@
              { "name": "published", "dataType": "date", "skip": true },
              { "name": "tags", "dataType": "text[]", "skip": true },
              { "name": "content", "dataType": "text", "skip": false }
+        ],
+        "fields": [
+            "title",
+            "hash",
+            "link",
+            "published",
+            "tags",
+            "content"
         ]
       },
-
-    "weaviate_fields": [
-        "title",
-        "hash",
-        "link",
-        "published",
-        "tags",
-        "content"
-    ],
 
     "feeds": [
         "https://www.lightreading.com",
