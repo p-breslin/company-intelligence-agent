@@ -16,7 +16,7 @@ try:
     # Cannot drop a database if there are active connections to it.
     # Terminate active connections to the database before dropping it
     cur.execute(
-        f"""
+        """
         SELECT pg_terminate_backend(pg_stat_activity.pid)
         FROM pg_stat_activity
         WHERE pg_stat_activity.datname = %s;
