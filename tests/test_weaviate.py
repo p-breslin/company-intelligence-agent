@@ -1,17 +1,18 @@
 import weaviate
+from utils.config import config
 
-"""
-Weaviate docker set up:
-
-docker run -d --name weaviate \ 
-    -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \ 
-    -e PERSISTENCE_DATA_PATH="/var/lib/weaviate" \ 
-    -e QUERY_DEFAULTS_LIMIT=25 \ 
-    -p 8080:8080 \ 
-    -p 50051:50051 \ 
-    semitechnologies/weaviate:latest
-
-"""
+config = config.get_section("weaviate")
 client = weaviate.connect_to_local(port=8080)
 print(client.is_ready())
-client.close()
+
+articles = client.collections.get(config["dbname"])
+response = articles.query.near_text(
+    query="How much has QuEra Computing raised in financing", limit=2
+)
+
+try:
+    for obj in response.objects:
+        print(obj.properties["title"])
+
+finally:
+    client.close()
