@@ -4,7 +4,7 @@ from utils.config import config
 from .rss_handler import RSSHandler
 from .simple_scraper import WebScraper
 from utils.helpers import store_to_postgres
-from backend.embedding_pipeline import GenerateEmbeddings
+from backend.chromadb_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.DEBUG,
