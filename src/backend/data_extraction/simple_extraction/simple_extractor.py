@@ -4,10 +4,10 @@ from utils.config import config
 from .rss_handler import RSSHandler
 from .simple_scraper import WebScraper
 from utils.helpers import store_to_postgres
-from backend.chromadb_pipeline import GenerateEmbeddings
+from backend.weaviate_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname)s - %(message)s",
 )
 
