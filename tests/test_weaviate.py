@@ -23,12 +23,15 @@ try:
 
             for obj in response.objects:
                 print(obj.properties["title"])
+            client.close()
 
         except Exception as e:
             logging.error(f"Failed to run embedding search: {e}")
+            client.close()
 
     except Exception as e:
         logging.error(f"Failed to obtain collection: {e}")
+        client.close()
 
-finally:
-    client.close()
+except Exception as e:
+    logging.error(f"Failed to connect to client: {e}")
