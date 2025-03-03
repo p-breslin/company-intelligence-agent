@@ -51,4 +51,4 @@ class ChromaDBViewer:
 if __name__ == "__main__":
     viewer = ChromaDBViewer()
     viewer.list_collections()
-    viewer.query_collection(N=1)
+    viewer.query_collection(N=3)
