@@ -6,7 +6,7 @@ client = weaviate.connect_to_local(port=config["port"])
 
 # Delete all schemas (which deletes all data)
 try:
-    client.schema.delete_all()
+    client.collections.delete_all()
     print("Weaviate database erased successfully.")
 
 except Exception as e:
