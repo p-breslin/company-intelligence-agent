@@ -102,8 +102,7 @@ export default function QueryInterface() {
                 ...entry,
                 response: fetchedResults.llm_response,
                 fullArticle:
-                  entry.fullArticle ||
-                  fetchedResults.results.map((doc) => doc.article).join("\n"), // Store full text ONLY ONCE
+                  entry.fullArticle || fetchedResults.results["content"],
               }
             : entry
         )
@@ -228,7 +227,7 @@ export default function QueryInterface() {
             </div>
           ) : (
             <ResponseCard
-              title={data?.[0]?.title || "No Title Available"}
+              title={data?.["title"] || "No Title Available"}
               summary={LLMResponse || "No response available."}
             />
           )}
