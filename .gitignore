@@ -6,9 +6,8 @@
 src/company_intelligence_agent.egg-info/  
 src/utils/__pycache__/  
 src/backend/__pycache__/  
-src/backend/__pycache__/*.pyc  
 src/backend/chromadb_store/chroma.sqlite3
-src/orchestrator/__pycache__/main.cpython-313.pyc
+src/orchestrator/__pycache__/
 
 # Ignoring specific Python scripts
 scripts/postgres_init.py  
@@ -35,12 +34,7 @@ dist/
 docs/DataFlow.pdf
 docs/Frontend.pdf
 docs/MDI.pdf
-src/orchestrator/__pycache__/main.cpython-313.pyc
-src/orchestrator/__pycache__/main.cpython-313.pyc
-src/orchestrator/__pycache__/main.cpython-313.pyc
-src/backend/playwright_scraper.py
+
+# Private info
 configs/FirecrawlConfig.json
 configs/API_KEYS.json
-src/orchestrator/__pycache__/main.cpython-313.pyc
-src/orchestrator/__pycache__/main.cpython-313.pyc
-src/orchestrator/__pycache__/main.cpython-313.pyc
