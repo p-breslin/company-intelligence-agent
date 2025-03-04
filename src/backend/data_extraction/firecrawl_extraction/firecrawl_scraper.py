@@ -185,7 +185,7 @@ class FireCrawlScraper:
                     return articles
 
                 logging.info(
-                    f"Batch scrape status: {status.get('status')} (Attempt {attempt+1}/10)"
+                    f"Batch scrape status: {status.get('status')} (Attempt {attempt + 1}/10)"
                 )
 
             logging.error("Async batch scrape timed out before completion.")
@@ -198,7 +198,7 @@ class FireCrawlScraper:
 
         return []
 
-    def run_scraping(self):
+    def run(self):
         """
         1) Scrapes all feeds for article links.
         2) Extracts article content in batches.
