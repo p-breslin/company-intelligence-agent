@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
         # Firecrawl scraper
         scraper = FireCrawlScraper(feeds)
-        articles = scraper.run_scraping()
+        articles = scraper.run()
 
         if not articles:
             logging.warning("No articles were extracted. Exiting.")
