@@ -2,8 +2,8 @@ import logging
 import psycopg
 from utils.config import config
 from utils.helpers import store_to_postgres
-from .firecrawl_scraper import FireCrawlScraper
-from backend.chromadb_pipeline import GenerateEmbeddings
+from .firecrawl_call import FireCrawlScraper
+from backend.weaviate_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         feeds = config.get_list("feeds")
 
         # Firecrawl scraper
-        scraper = FireCrawlScraper(feeds, db_conn=conn)
+        scraper = FireCrawlScraper(feeds)
         articles = scraper.run_scraping()
 
         if not articles:
