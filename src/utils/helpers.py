@@ -80,7 +80,6 @@ def convert_rss(rss_list):
         # Reconstruct the URL with new components
         website = urlunparse((parsed_url.scheme, domain, new_path, "", "", ""))
         converted.append(website.rstrip("/"))  # Remove trailing slashes
-        print(website.rstrip("/"))
 
     return converted
 
@@ -143,14 +142,14 @@ def store_to_postgres(articles, db_conn):
             logging.info(f"{len(values)} articles stored in PostgreSQL.")
 
         except Exception as e:
+            logging.warning(f"Error inserting article: {e}")
             db_conn.rollback()  # Rollback the transaction on error
-            print(f"Error inserting article: {e}")
 
         finally:
             cur.close()
 
     except Exception as e:
-        print("Database connection failed:", e)
+        logging.error("Database connection failed:", e)
 
 
 def import_postgres_data(db_conn, data="all", only_new=False):
