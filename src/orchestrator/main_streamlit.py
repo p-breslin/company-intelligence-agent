@@ -19,6 +19,10 @@ def main():
     if "last_context" not in st.session_state:
         st.session_state.last_context = None
 
+    # Stores the entire conversation history
+    if "conversation_chain" not in st.session_state:
+        st.session_state.conversation_chain = []
+
     # Title of webpage
     st.title("Company Intelligence Agent")
 
@@ -46,43 +50,49 @@ def main():
             st.write(llm_response)
 
             # Store query, response, and context in chat history
-            st.session_state.chat_history.append(
-                {
-                    "query": query,
-                    "response": llm_response,
-                    "title": retrieved_data["title"],
-                    "link": retrieved_data["link"],
-                }
-            )
+            chat_entry = {
+                "query": query,
+                "response": llm_response,
+                "title": retrieved_data["title"],
+                "link": retrieved_data["link"],
+            }
+            st.session_state.chat_history.append(chat_entry)
+            st.session_state.conversation_chain.append(chat_entry)
 
-            # Store context for follow-up
+            # Store context for follow-ups
             st.session_state.last_context = LLM_context
 
-        # Follow-up queries
-        st.subheader("Follow-Up Question")
-        follow_up_query = st.text_area("Enter follow-up question:", key="followup")
+        # Allow follow-ups ONLY if an initial query has been asked
+        if st.session_state.last_context:
+            st.subheader("Follow-Up Question")
+            follow_up_query = st.text_area("Enter follow-up question:", key="followup")
 
-        if st.button("Submit Follow-Up"):
-            if st.session_state.last_context:
+            if st.button("Submit Follow-Up"):
                 logging.info("Generating follow-up response...")
-                follow_up_response = LLM.generate_response(
-                    follow_up_query, st.session_state.last_context
-                )
-
-                # Store follow-up in chat history
-                st.session_state.chat_history.append(
-                    {
-                        "query": follow_up_query,
-                        "response": follow_up_response,
-                        "title": "Follow-Up",
-                        "link": "N/A",
-                    }
-                )
+                with st.status("Querying LLM...", expanded=True) as status:
+                    follow_up_response = LLM.generate_response(
+                        follow_up_query,
+                        retrieved_text=st.session_state.last_context,
+                        prompt="follow_up",
+                        multi_turn=True,
+                    )
+                    status.update(
+                        label="Extraction complete!", state="complete", expanded=False
+                    )
 
                 st.subheader("Follow-Up Response")
                 st.write(follow_up_response)
-            else:
-                st.error("No previous query to follow up on.")
+
+                # Store follow-up in chat history
+                prev_resp = st.session_state.chat_history[-1]
+                follow_up_entry = {
+                    "query": follow_up_query,
+                    "response": follow_up_response,
+                    "title": prev_resp["title"],
+                    "link": prev_resp["link"],
+                }
+                st.session_state.chat_history.append(follow_up_entry)
+                st.session_state.conversation_chain.append(follow_up_entry)
 
     elif page == "Chat History":
         st.header("Previous Queries")
