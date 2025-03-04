@@ -96,6 +96,7 @@
         "https://www.idc.com",
         "https://www.sdxcentral.com"
 
-    ]
+    ],
 
+    "firecrawl_prompt": "Find the three latest news articles or blogs. Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for each article. Do not include any URL links that may exist in the article content."
 }
