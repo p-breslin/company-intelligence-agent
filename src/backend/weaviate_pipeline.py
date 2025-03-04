@@ -78,7 +78,3 @@ class GenerateEmbeddings:
         self.db_conn.commit()
         cursor.close()
         logging.info("Embeddings marked in postgreSQL.")
-
-
-if __name__ == "__main__":
-    embeddings = GenerateEmbeddings()
