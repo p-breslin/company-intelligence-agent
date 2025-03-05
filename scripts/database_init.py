@@ -5,6 +5,8 @@ scripts = [
     "scripts/postgres/postgres_del.py",
     "scripts/postgres/postgres_setup.py",
     "scripts/weaviate/weaviate_del.py",
+    "scripts/arango/arango_del.py",
+    "scripts/arango/arango_init.py"
 ]
 
 # Run each script
