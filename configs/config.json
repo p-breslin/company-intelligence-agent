@@ -66,6 +66,18 @@
         ]
       },
 
+      "arango": {
+        "port": 8529,
+        "dbname": "company-intelligence-agent",
+        "collections": [
+            "Articles",
+            "Companies",
+            "Executives",
+            "Categories",
+            "Relationships"
+        ]
+      },
+
     "feeds": [
         "https://www.lightreading.com",
         "https://www.testandmeasurement.com",
@@ -98,5 +110,5 @@
 
     ],
 
-    "firecrawl_prompt": "Find the three latest news articles or blogs. Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for each article. Do not include any URL links that may exist in the article content."
+    "firecrawl_prompt": "Extract ONLY the two latest news articles or blogs for each URL given. Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for each article. Do not include any URL links that may exist in the article content."
 }
