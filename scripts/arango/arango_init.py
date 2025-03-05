@@ -40,20 +40,21 @@ try:
                 config["dbname"], username="root", password=os.getenv("ARANGO_PWD")
             )
 
-            # Create collections if they don’t exist
-            for c in config["collections"]:
-                if not db.has_collection(c):
-                    db.create_collection(c)
-                    logging.info(f"Collection '{c}' created.")
+            # Create vertex and edge collections if they don’t exist
+            for v in config["vertices"]:
+                if not db.has_collection(v):
+                    db.create_collection(v)
+                    logging.info(f"Vertex collection '{v}' created.")
+
+            for e in config["edges"]:
+                if not db.has_collection(e, edge=True):
+                    db.create_collection(e, edge=True)
+                    logging.info(f"Vertex collection '{e}' created.")
+
                 else:
-                    logging.info(f"Collection '{c}' already exists.")
+                    logging.info("Collections already exist.")
 
-            # Create an Edge Collection for relationships (if needed)
-            if not db.has_collection("Relationships"):
-                db.create_collection("Relationships", edge=True)
-                logging.info("Edge collection 'Relationships' created.")
-
-            logging.info("ArangoDB initialization complete!")
+                logging.info("ArangoDB initialization complete!")
 
         except Exception as e:
             logging.error(f"Failed to connect to database: {e}")

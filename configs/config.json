@@ -69,12 +69,14 @@
       "arango": {
         "port": 8529,
         "dbname": "company-intelligence-agent",
-        "collections": [
+        "vertices": [
             "Articles",
             "Companies",
-            "Executives",
-            "Categories",
-            "Relationships"
+            "Products"
+        ],
+        "edges": [
+            "Produces",
+            "CompetesWith"
         ]
       },
 
