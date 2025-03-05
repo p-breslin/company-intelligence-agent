@@ -24,7 +24,7 @@ try:
     client = ArangoClient(hosts=f"http://localhost:{config['port']}")
 
     try:
-        # Authenticate with root user
+        # Authenticate with root user (required to manage databases)
         sys_db = client.db("_system", username="root", password=os.getenv("ARANGO_PWD"))
 
         # Create the database if it does not exist
