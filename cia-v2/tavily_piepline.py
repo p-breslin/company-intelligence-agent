@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from utils.config import ConfigLoader
 from arango_pipeline import GraphDBHandler
 from backend.LLM_integration import LocalLLM
+from firecrawl_extract import FirecrawlScraper
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.tools.tavily_search import TavilySearchResults
 
@@ -25,8 +26,8 @@ class CompetitorInfo(BaseModel):
 class TavilySearch:
     def __init__(self):
         load_dotenv()
-        self.N = 3  # how many links to scrape
-        self.links = []
+        self.N = 1  # how many links to scrape
+        self.links = None
         self.llm = LocalLLM()
         self.config = ConfigLoader("config")
         self.tavily_tool = TavilySearchResults(
@@ -35,6 +36,7 @@ class TavilySearch:
             max_results=5,
             include_answer=True,
         )
+        self.extract = FirecrawlScraper()
 
     async def get_products(self, company):
         """Web searches the biggest products for the given company."""
@@ -48,10 +50,16 @@ class TavilySearch:
             ]
         )
 
-        # Add URL links for scraping
-        for res in results[0][: self.N]:
-            self.links.append(res["url"])
-        return results["answer"]
+        # Add URL links for scraping and send to firecrawl extractor
+        self.links = [res["url"] for res in results[0][: self.N]]
+
+        # Send to Firecrawl extractor
+        if self.links:
+            logging.info("Sending product links to Firecrawl.")
+            await self.extract.run(self.links)
+            logging.info("Product content extraction completed.")
+
+        return results["answer"]  # LLM summary of results
 
     async def get_competitors(self, company):
         """Web searches the biggest competitors for the given company."""
@@ -66,9 +74,15 @@ class TavilySearch:
         )
 
         # Add URL links for scraping
-        for res in results[0][: self.N]:
-            self.links.append(res["url"])
-        return results["answer"]
+        self.links = [res["url"] for res in results[0][: self.N]]
+
+        # Send to Firecrawl extractor
+        if self.links:
+            logging.info("Sending competitor links to Firecrawl.")
+            await self.extract.run(self.links)
+            logging.info("Competitor content extraction completed.")
+
+        return results["answer"]  # LLM summary of results
 
     async def run_search(self, company):
         """Runs both searches in parallel using asyncio.gather()."""
@@ -77,12 +91,7 @@ class TavilySearch:
         )
         return {"products": products, "competitors": competitors}
 
-    def send_to_firecrawl(self):
-        """Send links to Firecrawl to be scraped."""
 
-
-async def main(company):
+async def search_engine(company):
     engine = TavilySearch()
-    products, competitors = await asyncio.gather(
-        engine.get_products(company), engine.get_competitors(company)
-    )
+    return await engine.run_search(company)
