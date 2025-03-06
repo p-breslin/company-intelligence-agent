@@ -1,9 +1,10 @@
 import asyncio
 import logging
 import streamlit as st
-from tavily_piepline import TavilySearch
+from tavily_piepline import search_engine
 from backend.LLM_integration import LocalLLM
 from orchestrator.embedding_search import EmbeddingSearch
+import sys
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -12,7 +13,6 @@ logging.basicConfig(
 
 def main():
     LLM = LocalLLM()
-    search = TavilySearch()
     database = "weaviate"
 
     # Stores chat history
@@ -44,24 +44,21 @@ def main():
                 with st.spinner("Searching the Web..."):
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    results, engine = loop.run_until_complete(
-                        search.run_search(company)
-                    )
+                    results, firecrawl_task = loop.run_until_complete(search_engine(company))
 
                 st.subheader("Results")
                 st.write(f"**Products:** {results['products']}")
                 st.write(f"**Competitors:** {results['competitors']}")
+                st.write(f"**Links:** {results['links']}")
 
                 # Run Firecrawl in the background without blocking UI
-                st.session_state.firecrawl_task = asyncio.create_task(
-                    engine.wait_for_firecrawl()
-                )
+                st.session_state.firecrawl_task = firecrawl_task
 
         # Option to query the results
         st.subheader("Ask More About These Companies or Products")
         query = st.text_area("Enter your query:")
         if st.button("submit query"):
-            if not st.session_state.firecrawl_task:
+            if not st.session_state.firecrawl_task.done():
                 st.warning("Please run an initial company search first.")
             else:
                 # Wait for background tasks to complete
