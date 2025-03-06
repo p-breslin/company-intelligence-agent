@@ -32,7 +32,7 @@ class FirecrawlScraper:
         try:
             # Define the extraction parameters
             extract_params = {
-                "prompt": self.config["firecrawl_extract"],
+                "prompt": self.config.get_value("firecrawl_extract"),
                 "schema": ExtractSchema.model_json_schema(),
             }
 
@@ -71,7 +71,7 @@ class FirecrawlScraper:
             return []
 
     async def run(self, links):
-        articles = await self.extractor.batch_extract(links)
+        articles = await self.batch_extract(links)
         if articles:
             for article in articles:
                 article["hash"] = generate_hash(article["link"])

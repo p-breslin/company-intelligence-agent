@@ -118,7 +118,7 @@
     "firecrawl_extract": "Extract the URL link, title, published date, tags, and full article content from the page. Do not include any URL links in the content.",
 
     "tavily": {
-        "products": "what are {company}'s most popular products",
-        "competitors": "who are {company}'s biggest competitors"
+        "prompt_products": "what are {company}'s most popular products",
+        "prompt_competitors": "who are {company}'s biggest competitors"
     }
 }
