@@ -1,10 +1,12 @@
 import os
-import time
 import json
+import asyncio
 import logging
 from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
 from pydantic import BaseModel, Field
+from utils.config import ConfigLoader
+from utils.helpers import generate_hash
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -19,24 +21,24 @@ class ExtractSchema(BaseModel):
     content: str = Field(description="The full article text")
 
 
-class FirecrawlExtractor:
-    def __init__(self, links):
+class FirecrawlScraper:
+    def __init__(self):
         load_dotenv()
-        self.links = links
         self.app = FirecrawlApp(os.getenv("FIRECRAWL_API"))
+        self.config = ConfigLoader("config")
 
-    def batch_extract(self):
+    async def batch_extract(self, links):
         """Uses Firecrawl's batch extraction to scrape list of URL links."""
         try:
             # Define the extraction parameters
             extract_params = {
-                "prompt": "Extract the URL link, title, published date, tags, and full content from the page.",
+                "prompt": self.config["firecrawl_extract"],
                 "schema": ExtractSchema.model_json_schema(),
             }
 
             # Firecrawl's async_extract submits batch jobs
-            job = self.app.async_batch_scrape_urls(
-                self.links, {"formats": ["extract"], "extract": extract_params}
+            job = await self.app.async_batch_scrape_urls(
+                links, {"formats": ["extract"], "extract": extract_params}
             )
 
             if not job["id"]:
@@ -45,8 +47,9 @@ class FirecrawlExtractor:
 
             # Poll for job completion
             for _ in range(120):
-                time.sleep(10)
-                status = self.app.check_batch_scrape_status(job["id"])
+                await asyncio.sleep(10)
+
+                status = await self.app.check_batch_scrape_status(job["id"])
                 if not status["success"]:
                     logging.error(
                         f"Failed to retrieve batch job status for {job['id']}"
@@ -67,14 +70,13 @@ class FirecrawlExtractor:
             logging.error(f"Error during batch extraction: {e}")
             return []
 
+    async def run(self, links):
+        articles = await self.extractor.batch_extract(links)
+        if articles:
+            for article in articles:
+                article["hash"] = generate_hash(article["link"])
 
-if __name__ == "__main__":
-    links = [
-        "https://www.musicmagpie.co.uk/blog/2024/03/15/what-is-the-most-popular-apple-product-right-now/",
-        "https://thewatchesgeek.com/best-apple-products/",
-    ]
+        # with open("test_extract.json", "w", encoding="utf-8") as f:
+        #     json.dump(articles, f, indent=4, ensure_ascii=False)
 
-    extractor = FirecrawlExtractor(links=links)
-    data = extractor.batch_extract()
-    with open("test_extract.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+        return articles
