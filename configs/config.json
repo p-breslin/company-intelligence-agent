@@ -69,6 +69,7 @@
       "arango": {
         "port": 8529,
         "dbname": "company-intelligence-agent",
+        "user": "root",
         "vertices": [
             "Articles",
             "Companies",

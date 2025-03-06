@@ -24,7 +24,7 @@ try:
         # Check if the database exists, then delete it
         if sys_db.has_database(config["dbname"]):
             sys_db.delete_database(config["dbname"])
-            print(f"Database '{config['dbname']}' deleted successfully!")
+            print(f"Database '{config['dbname']}' deleted successfully.")
         else:
             print(f"Database '{config['dbname']}' does not exist.")
 
