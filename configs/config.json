@@ -113,5 +113,10 @@
 
     ],
 
-    "firecrawl_prompt": "Extract ONLY the two latest news articles or blogs for each URL given. Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for each article. Do not include any URL links that may exist in the article content."
+    "firecrawl_prompt": "Extract ONLY the two latest news articles or blogs for each URL given. Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for each article. Do not include any URL links that may exist in the article content.",
+
+    "tavily": {
+        "products": "what are {company}'s most popular products",
+        "competitors": "who are {company}'s biggest competitors"
+    }
 }
