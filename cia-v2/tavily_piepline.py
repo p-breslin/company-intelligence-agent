@@ -37,6 +37,7 @@ class TavilySearch:
             include_answer=True,
         )
         self.extract = FirecrawlScraper()
+        self.firecrawl_tasks = []  # will run Firecrawl tasks in the background
 
     async def get_products(self, company):
         """Web searches the biggest products for the given company."""
@@ -56,10 +57,10 @@ class TavilySearch:
         # Send to Firecrawl extractor
         if self.links:
             logging.info("Sending product links to Firecrawl.")
-            await self.extract.run(self.links)
-            logging.info("Product content extraction completed.")
+            task = asyncio.create_task(self.extract.run(self.links))
+            self.firecrawl_tasks.append(task)
 
-        return results["answer"]  # LLM summary of results
+        return results["answer"] if results else None  # LLM summary of results
 
     async def get_competitors(self, company):
         """Web searches the biggest competitors for the given company."""
@@ -79,10 +80,17 @@ class TavilySearch:
         # Send to Firecrawl extractor
         if self.links:
             logging.info("Sending competitor links to Firecrawl.")
-            await self.extract.run(self.links)
-            logging.info("Competitor content extraction completed.")
+            task = asyncio.create_task(self.extract.run(self.links))
+            self.firecrawl_tasks.append(task)
 
-        return results["answer"]  # LLM summary of results
+        return results["answer"] if results else None  # LLM summary of results
+
+    async def wait_for_tasks(self):
+        """Waits for Firecrawl extraction to complete."""
+        if self.firecrawl_tasks:
+            logging.info("Waiting for Firecrawl extraction to finish...")
+            await asyncio.gather(*self.firecrawl_tasks)  # Waits for all tasks
+            logging.info("Firecrawl extraction is now complete.")
 
     async def run_search(self, company):
         """Runs both searches in parallel using asyncio.gather()."""
@@ -94,4 +102,5 @@ class TavilySearch:
 
 async def search_engine(company):
     engine = TavilySearch()
-    return await engine.run_search(company)
+    results = await engine.run_search(company)
+    return results, engine  # Return engine so we can wait for Firecrawl later
