@@ -24,7 +24,7 @@ class GenerateEmbeddings:
         # Load schema from config
         schema = [
             wvc.config.Property(
-                name=field["name"],
+                name=field["dbname"],
                 data_type=wvc.config.DataType(field["dataType"]),
                 skip_vectorization=field["skip"],
             )
