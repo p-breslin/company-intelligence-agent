@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import logging
 from typing import List
@@ -19,7 +20,7 @@ class ExtractSchema(BaseModel):
     title: str = Field(..., description="Title of the article")
     published: str = Field(..., description="The published date of the article")
     tags: List[str] = Field(
-        ..., description="Three keywords related to the article", max_items=3
+        ..., description="Three keywords related to the article", max_length=3
     )
     content: str = Field(..., description="The full article text")
 
@@ -84,3 +85,13 @@ class FirecrawlScraper:
             for article in articles:
                 article["hash"] = generate_hash(article["link"])
         store_data(articles)
+
+
+# Entry point for subprocess execution
+if __name__ == "__main__":
+    links = sys.argv[1:]  # argv[1:] is everything after the script name
+    logging.info(f"Firecrawl extracting {len(links)} links...")
+
+    scraper = FirecrawlScraper()
+    scraper.run(links)
+    logging.info("Firecrawl extraction complete.")
