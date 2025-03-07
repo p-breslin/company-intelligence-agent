@@ -1,5 +1,7 @@
+import os
 import time
 import logging
+from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
 from utils.config import ConfigLoader
 from pydantic import BaseModel, Field
@@ -27,13 +29,10 @@ class ArticleSchemaResponse(BaseModel):
 class FireCrawlScraper:
     def __init__(self, feeds):
         try:
+            load_dotenv()
             self.feeds = feeds
             self.articles = None
-            config = ConfigLoader("API_KEYS")
-            api_key = config.get_value("firecrawl")
-            if not api_key:
-                raise ValueError("API key is missing. Please check config.")
-            self.app = FirecrawlApp(api_key=api_key)
+            self.app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API"))
             logging.info("Firecrawl initialized.")
         except Exception as e:
             logging.error(f"Failed to initialize Firecrawl: {e}")
@@ -51,8 +50,8 @@ class FireCrawlScraper:
         logging.info("Feeds prepared for extraction.")
 
         # Import the Firecrawl prompt
-        config = ConfigLoader("config")
-        prompt = config.get_value("firecrawl_prompt")
+        config = ConfigLoader("config").get_section("firecrawl")
+        prompt = config["extract_prompt"]
 
         if batch_job:
             logging.info("Starting batch extraction job...")
