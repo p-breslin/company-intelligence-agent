@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import subprocess
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from tavily import AsyncTavilyClient
@@ -35,7 +36,6 @@ class TavilySearch:
 
         # Firecrawl
         self.extract = FirecrawlScraper()
-        self.firecrawl_task = None  # will run Firecrawl tasks in the background
 
     async def get_products(self, company):
         """Web searches the biggest products for the given company."""
@@ -59,25 +59,6 @@ class TavilySearch:
         self.links.extend(comp_links)
         return response["answer"]  # LLM summary of results
 
-    async def run_firecrawl(self):
-        """Schedules FirecrawlScraper.run() in a separate thread."""
-        if not self.links:
-            logging.warning("No links to scrape.")
-            return
-
-        # Ensure we don’t create a new event loop unnecessarily
-        loop = asyncio.get_running_loop()
-        logging.info(
-            f"Starting Firecrawl for {len(self.links)} links in a background thread..."
-        )
-
-        # Offload the blocking function to a thread to unblock the main loop
-        self.firecrawl_task = loop.run_in_executor(
-            None,  # uses default ThreadPoolExecutor
-            self.extract.run,  # the blocking function
-            self.links,  # argument
-        )
-
     async def run_search(self, company):
         """
         1. Get products & competitors in parallel.
@@ -89,17 +70,25 @@ class TavilySearch:
         )
 
         # Start Firecrawl AFTER all links are collected
-        if self.links:
-            await (
-                self.run_firecrawl()
-            )  # we 'await' so the method can set up the task & return quickly
 
-        return {"products": products, "competitors": competitors, "links": self.links}
+        # Start Firecrawl as a background process
+        firecrawl_task = subprocess.Popen(
+            ["python3", "-m", "firecrawl_extract", *self.links],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        logging.info("Firecrawl started in the background.")
+
+        # self.extract.run(self.links)
+
+        return {
+            "products": products,
+            "competitors": competitors,
+            "links": self.links,
+        }, firecrawl_task
 
 
 async def search_engine(company):
     engine = TavilySearch()
-    results = await engine.run_search(company)
-
-    # Return engine so we can wait for Firecrawl later
-    return results, engine.firecrawl_task
+    results, firecrawl_task = await engine.run_search(company)
+    return results, firecrawl_task

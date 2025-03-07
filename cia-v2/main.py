@@ -11,6 +11,24 @@ logging.basicConfig(
 )
 
 
+# Track any background Firecrawl tasks
+if "firecrawl_task" not in st.session_state:
+    st.session_state.firecrawl_task = None
+
+
+def wait_for_firecrawl():
+    """Waits for the Firecrawl background process to complete."""
+    if st.session_state.firecrawl_task is not None:
+        process = st.session_state.firecrawl_task
+        if process.poll() is None:  # Check if it's still running
+            logging.info("Waiting for Firecrawl to finish...")
+            process.wait()
+            logging.info("Firecrawl process completed.")
+
+        # Cleanup after completion
+        st.session_state.firecrawl_process = None
+
+
 def main():
     LLM = LocalLLM()
     database = "weaviate"
@@ -22,10 +40,6 @@ def main():
     # Stores previous LLM context for follow-up
     if "last_context" not in st.session_state:
         st.session_state.last_context = None
-
-    # Stores Firecrawl background task status
-    if "firecrawl_task" not in st.session_state:
-        st.session_state.firecrawl_task = None
 
     # Title of webpage
     st.title("Company Intelligence Agent")
@@ -40,36 +54,19 @@ def main():
                 st.warning("Please enter a company name.")
             else:
                 with st.spinner("Searching the Web..."):
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    results, firecrawl_task = loop.run_until_complete(
-                        search_engine(company)
-                    )
-                    loop.close()
+                    result, firecrawl_task = asyncio.run(search_engine(company))
+                    st.session_state.firecrawl_process = firecrawl_task
 
                 st.subheader("Results")
-                st.write(f"**Products:** {results['products']}")
-                st.write(f"**Competitors:** {results['competitors']}")
-                st.write(f"**Links:** {results['links']}")
-
-                # Store Firecrawl task to enforce completion before queries
-                st.session_state.firecrawl_task = firecrawl_task
+                st.write(f"**Products:** {result['products']}")
+                st.write(f"**Competitors:** {result['competitors']}")
+                st.write(f"**Links:** {result['links']}")
 
         # Option to query the results
         query = st.text_area("Ask more about these companies or products:")
         if st.button("Submit query"):
-            if (
-                st.session_state.firecrawl_task
-                and not st.session_state.firecrawl_task.done()
-            ):
-                logging.info("Firecrawl extraction not completed.")
-
-                # Wait for background tasks to complete
-                with st.spinner("Storing new data..."):
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    loop.run_until_complete(st.session_state.firecrawl_task)
-                    loop.close()
+            with st.spinner("Storing new data..."):
+                wait_for_firecrawl()
 
             with st.status("Extracting data...", expanded=True) as status:
                 vector_search = EmbeddingSearch(query, database=database)
