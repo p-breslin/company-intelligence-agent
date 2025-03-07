@@ -5,13 +5,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from tavily import AsyncTavilyClient
 from utils.config import ConfigLoader
-from arango_pipeline import GraphDBHandler
 from backend.LLM_integration import LocalLLM
 from firecrawl_extract import FirecrawlScraper
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 
 class CompetitorInfo(BaseModel):
@@ -46,6 +41,7 @@ class TavilySearch:
         """Web searches the biggest products for the given company."""
         query = self.config["prompt_products"].format(company=company)
         response = await self.client.search(query, **self.search_params)
+        logging.info("Product search complete.")
 
         # Add URL links for scraping (response is a list of dictionaries)
         prod_links = [res["url"] for res in response["results"][: self.N]]
@@ -56,6 +52,7 @@ class TavilySearch:
         """Web searches the biggest competitors for the given company."""
         query = self.config["prompt_competitors"].format(company=company)
         response = await self.client.search(query, **self.search_params)
+        logging.info("Competitors search complete.")
 
         # Add URL links for scraping (response is a list of dictionaries)
         comp_links = [res["url"] for res in response["results"][: self.N]]
@@ -63,30 +60,39 @@ class TavilySearch:
         return response["answer"]  # LLM summary of results
 
     async def run_firecrawl(self):
-        """Runs Firecrawl extractions in a single batch."""
+        """Schedules FirecrawlScraper.run() in a separate thread."""
+        if not self.links:
+            logging.warning("No links to scrape.")
+            return
 
-        if self.links:
-            logging.info(f"Starting Firecrawl extraction for {len(self.links)} links.")
-            self.firecrawl_task = asyncio.create_task(self.extract.run(self.links))
-            await self.firecrawl_task  # Ensure completion
-            logging.info("Firecrawl extraction completed.")
+        # Ensure we don’t create a new event loop unnecessarily
+        loop = asyncio.get_running_loop()
+        logging.info(
+            f"Starting Firecrawl for {len(self.links)} links in a background thread..."
+        )
 
-    async def wait_for_tasks(self):
-        """Waits for Firecrawl extraction to complete."""
-        if self.firecrawl_tasks:
-            logging.info("Waiting for Firecrawl extraction to finish...")
-            await asyncio.gather(*self.firecrawl_tasks)  # Waits for all tasks
-            logging.info("Firecrawl extraction is now complete.")
+        # Offload the blocking function to a thread to unblock the main loop
+        self.firecrawl_task = loop.run_in_executor(
+            None,  # uses default ThreadPoolExecutor
+            self.extract.run,  # the blocking function
+            self.links,  # argument
+        )
 
     async def run_search(self, company):
-        """Runs both searches in parallel using asyncio.gather()."""
+        """
+        1. Get products & competitors in parallel.
+        2. Start Firecrawl extraction in the background.
+        3. Return results immediately so UI can display them without waiting.
+        """
         products, competitors = await asyncio.gather(
             self.get_products(company), self.get_competitors(company)
         )
 
         # Start Firecrawl AFTER all links are collected
         if self.links:
-            self.firecrawl_task = asyncio.create_task(self.run_firecrawl())
+            await (
+                self.run_firecrawl()
+            )  # we 'await' so the method can set up the task & return quickly
 
         return {"products": products, "competitors": competitors, "links": self.links}
 

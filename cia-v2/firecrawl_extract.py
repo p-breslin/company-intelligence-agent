@@ -1,6 +1,6 @@
 import os
 import json
-import asyncio
+import time
 import logging
 from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
@@ -27,17 +27,19 @@ class FirecrawlScraper:
         self.app = FirecrawlApp(os.getenv("FIRECRAWL_API"))
         self.config = ConfigLoader("config")
 
-    async def batch_extract(self, links):
+    def async_batch_scrape(self, links):
         """Uses Firecrawl's batch extraction to scrape list of URL links."""
         try:
             # Define the extraction parameters
             extract_params = {
                 "prompt": self.config.get_value("firecrawl_extract"),
                 "schema": ExtractSchema.model_json_schema(),
+                "onlyMainContent": True,
+                "ignoreInvalidURLs": True,
             }
 
             # Firecrawl's async_extract submits batch jobs
-            job = await self.app.async_batch_scrape_urls(
+            job = self.app.async_batch_scrape_urls(
                 links, {"formats": ["extract"], "extract": extract_params}
             )
 
@@ -47,9 +49,9 @@ class FirecrawlScraper:
 
             # Poll for job completion
             for _ in range(120):
-                await asyncio.sleep(10)
+                time.sleep(10)
 
-                status = await self.app.check_batch_scrape_status(job["id"])
+                status = self.app.check_batch_scrape_status(job["id"])
                 if not status["success"]:
                     logging.error(
                         f"Failed to retrieve batch job status for {job['id']}"
@@ -57,7 +59,6 @@ class FirecrawlScraper:
                     break
 
                 if status["status"] == "completed":
-                    print(status["data"])
                     logging.info("Batch extraction completed.")
                     return status["data"]
 
@@ -70,11 +71,11 @@ class FirecrawlScraper:
             logging.error(f"Error during batch extraction: {e}")
             return []
 
-    async def run(self, links):
-        articles = await self.batch_extract(links)
+    def run(self, links):
+        articles = self.async_batch_scrape(links)
         if articles:
             for article in articles:
-                article["hash"] = generate_hash(article["link"])
+                article["extract"]["hash"] = generate_hash(article["extract"]["link"])
 
         # with open("test_extract.json", "w", encoding="utf-8") as f:
         #     json.dump(articles, f, indent=4, ensure_ascii=False)
