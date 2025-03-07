@@ -25,7 +25,7 @@ class GenerateEmbeddings:
         )
 
         if articles:
-            collection = self.client.collections.get(self.collection_name)
+            collection = self.client.collections.get(self.config["dbname"])
             with collection.batch.dynamic() as batch:
                 for article in articles:
                     data = dict(zip(self.config["fields"], article))
