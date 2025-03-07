@@ -41,6 +41,10 @@ def main():
     if "last_context" not in st.session_state:
         st.session_state.last_context = None
 
+    # Stores result from company query
+    if "company_results" not in st.session_state:
+        st.session_state.company_results = None
+
     # Title of webpage
     st.title("Company Intelligence Agent")
 
@@ -56,77 +60,96 @@ def main():
                 with st.spinner("Searching the Web..."):
                     result, firecrawl_task = asyncio.run(search_engine(company))
                     st.session_state.firecrawl_task = firecrawl_task
+                    st.session_state.company_results = result
 
-                st.subheader("Results")
-                st.write(f"**Products:** {result['products']}")
-                st.write(f"**Competitors:** {result['competitors']}")
-                st.write(f"**Links:** {result['links']}")
-
-        # Option to query the results
-        query = st.text_area("Ask more about these companies or products:")
-        if st.button("Submit query"):
-            with st.spinner("Storing new data..."):
-                wait_for_firecrawl()
-
-            with st.status("Extracting data...", expanded=True) as status:
-                vector_search = EmbeddingSearch(query, database=database)
-                retrieved_data, LLM_context = vector_search.run()
-                logging.info("Generating response...")
-                status.update(label="Querying LLM...", state="running")
-                llm_response = LLM.generate_response(query, LLM_context)
-                status.update(
-                    label="Extraction complete!", state="complete", expanded=False
-                )
-
-            st.subheader("Response")
-            st.write(f"**Title:** {retrieved_data['title']}")
-            st.write(f"**Link:** {retrieved_data['link']}")
-            st.write(llm_response)
-
-            # Store query, response, and context in chat history
-            chat_entry = {
-                "query": query,
-                "response": llm_response,
-                "title": retrieved_data["title"],
-                "link": retrieved_data["link"],
-            }
-            st.session_state.chat_history.append(chat_entry)
-            st.session_state.conversation_chain.append(chat_entry)
-
-            # Store context for follow-ups
-            st.session_state.last_context = LLM_context
-
-        # Allow follow-ups ONLY if an initial query has been asked
-        if st.session_state.last_context:
-            st.subheader("Follow-Up Query")
-            follow_up_query = st.text_area("Enter follow-up query:", key="followup")
-
-            if st.button("Submit follow-up"):
-                logging.info("Generating follow-up response...")
-                with st.status("Querying LLM...", expanded=True) as status:
-                    follow_up_response = LLM.generate_response(
-                        follow_up_query,
-                        retrieved_text=st.session_state.last_context,
-                        prompt="follow_up",
-                        multi_turn=True,
+                    # Add company results to chat history
+                    response = (
+                        f"**Products:** {', '.join(list(result['products']))}\n\n"
+                        f"**Competitors:** {', '.join(list(result['competitors']))}"
                     )
+                    chat_entry = {
+                        "query": f"Company Search: {company}",
+                        "response": response,
+                        "title": company,
+                        "links": result["links"],
+                    }
+                    st.session_state.chat_history.append(chat_entry)
+
+        # Ensure previous search results remain visible
+        if st.session_state.company_results:
+            result = st.session_state.company_results
+            st.subheader("Results")
+            st.write(f"**Products:** {result['products']}")
+            st.write(f"**Competitors:** {result['competitors']}")
+            st.write(f"**Links:** {result['links']}")
+
+            # Option to query after the company results are shown
+            query = st.text_area("Ask more about these results:")
+            if st.button("Submit query"):
+                with st.spinner("Storing new data..."):
+                    wait_for_firecrawl()
+
+                with st.status("Extracting data...", expanded=True) as status:
+                    vector_search = EmbeddingSearch(query, database=database)
+                    retrieved_data, LLM_context = vector_search.run()
+                    logging.info("Generating response...")
+                    status.update(label="Querying LLM...", state="running")
+                    llm_response = LLM.generate_response(query, LLM_context)
                     status.update(
-                        label="Extraction complete!", state="complete", expanded=False
+                        label="Extraction complete!",
+                        state="complete",
+                        expanded=False,
                     )
 
-                st.subheader("Follow-Up Response")
-                st.write(follow_up_response)
+                st.subheader("Response")
+                st.write(f"**Title:** {retrieved_data['title']}")
+                st.write(f"**Link:** {retrieved_data['link']}")
+                st.write(llm_response)
 
-                # Store follow-up in chat history
-                prev_resp = st.session_state.chat_history[-1]
-                follow_up_entry = {
-                    "query": follow_up_query,
-                    "response": follow_up_response,
-                    "title": prev_resp["title"],
-                    "link": prev_resp["link"],
+                # Store query, response, and context in chat history
+                chat_entry = {
+                    "query": query,
+                    "response": llm_response,
+                    "title": retrieved_data["title"],
+                    "link": retrieved_data["link"],
                 }
-                st.session_state.chat_history.append(follow_up_entry)
-                st.session_state.conversation_chain.append(follow_up_entry)
+                st.session_state.chat_history.append(chat_entry)
+
+                # Store context for follow-ups
+                st.session_state.last_context = LLM_context
+
+            # Allow follow-ups ONLY if an initial query has been asked
+            if st.session_state.last_context:
+                st.subheader("Follow-Up Query")
+                follow_up_query = st.text_area("Enter follow-up query:", key="followup")
+
+                if st.button("Submit follow-up"):
+                    logging.info("Generating follow-up response...")
+                    with st.status("Querying LLM...", expanded=True) as status:
+                        follow_up_response = LLM.generate_response(
+                            follow_up_query,
+                            retrieved_text=st.session_state.last_context,
+                            prompt="follow_up",
+                            multi_turn=True,
+                        )
+                        status.update(
+                            label="Extraction complete!",
+                            state="complete",
+                            expanded=False,
+                        )
+
+                    st.subheader("Follow-Up Response")
+                    st.write(follow_up_response)
+
+                    # Store follow-up in chat history
+                    prev_resp = st.session_state.chat_history[-1]
+                    follow_up_entry = {
+                        "query": follow_up_query,
+                        "response": follow_up_response,
+                        "title": prev_resp["title"],
+                        "link": prev_resp["link"],
+                    }
+                    st.session_state.chat_history.append(follow_up_entry)
 
     elif page == "Chat History":
         st.header("Previous Queries")
