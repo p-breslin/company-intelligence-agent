@@ -22,6 +22,7 @@ class ExtractSchema(BaseModel):
     tags: List[str] = Field(
         ..., description="Three keywords related to the article", max_length=3
     )
+    summary: str = Field(..., description="A short summary of the article text")
     content: str = Field(..., description="The full article text")
 
 
