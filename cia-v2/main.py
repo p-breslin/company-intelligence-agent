@@ -26,7 +26,7 @@ def wait_for_firecrawl():
             logging.info("Firecrawl process completed.")
 
         # Cleanup after completion
-        st.session_state.firecrawl_process = None
+        st.session_state.firecrawl_task = None
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
             else:
                 with st.spinner("Searching the Web..."):
                     result, firecrawl_task = asyncio.run(search_engine(company))
-                    st.session_state.firecrawl_process = firecrawl_task
+                    st.session_state.firecrawl_task = firecrawl_task
 
                 st.subheader("Results")
                 st.write(f"**Products:** {result['products']}")
