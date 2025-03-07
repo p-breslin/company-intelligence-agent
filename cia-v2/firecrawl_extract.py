@@ -4,6 +4,7 @@ import logging
 from typing import List
 from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
+from data_storage import store_data
 from pydantic import BaseModel, Field
 from utils.config import ConfigLoader
 from utils.helpers import generate_hash
@@ -82,4 +83,4 @@ class FirecrawlScraper:
         if articles:
             for article in articles:
                 article["hash"] = generate_hash(article["link"])
-        return articles
+        store_data(articles)
