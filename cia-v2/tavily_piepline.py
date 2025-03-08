@@ -31,7 +31,8 @@ class TavilySearch:
             "search_depth": "basic",
             "max_results": 2,
             "include_answer": "basic",
-            "time_range": "year",
+            "time_range": "month",
+            "topic": "news"
         }
 
         # Firecrawl
