@@ -181,11 +181,10 @@ def import_postgres_data(db_conn, data="all", only_new=False):
 def token_count(text):
     """
     Estimates the token count based on word and character length.
-        - Approx. number of tokens per word in English = 0.75.
-        - Average number of characters per token = 4.
-        - If text has many short words: (characters/4) gives better estimate.
-        - If text has longer words: (words*0.75) is more accurate.
+    - Uses whitespace + punctuation-based splitting.
+    - Adjusts for numbers and special characters.
+    - Averages character-based and word-based estimation.
     """
-    words = text.split()
+    words = re.findall(r"\S+", text)  # captures words, punc., special symbols
     chars = len(text)
-    return int(max(len(words) * 0.75, chars / 4))
+    return int(max(len(words) * 0.8, chars / 4))
