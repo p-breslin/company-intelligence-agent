@@ -1,156 +1,143 @@
 import ollama
+import logging
 from utils.config import ConfigLoader
 from utils.helpers import token_count
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 class LocalLLM:
+    """
+    Wraps a local LLM for conversation-based responses, with the ability to handle multi-turn exchanges and chunk large inputs to avoid token limits.
+    """
+
     def __init__(self, conversation_limit=5):
-        self.db = ConfigLoader("config").get_section("DB_USER")
         config = ConfigLoader("llmConfig")
-        self.llm = config.get_section("models")["llama"]
+        self.llm = config.get_section("models")["llama-instruct"]
         self.prompts = config.get_section("prompts")
         self.chunking = config.get_section("chunking")
+
+        # Limit on how many user+assistant pairs of messages to keep around
         self.conversation_limit = conversation_limit
+
+        # Stores as a list of dicts: [{"role": "...", "content": "..."}]
         self.conversation_history = []
 
     def chunk_text(self, text):
-        """Text splitter for making content chunks for the LLM."""
+        """
+        Splits large text into smaller overlapping chunks according to the
+        configured chunk_size and chunk_overlap values.
+        """
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunking["size"], chunk_overlap=self.chunking["overlap"]
         )
         return splitter.split_text(text)
 
-    def generate_response(
-        self, user_query, retrieved_text, prompt="concise", multi_turn=False
-    ):
+    def call_llm(self, messages):
         """
-        - Uses the Local LLM to generate either a:
-            > Single response from one turn conversation.
-            > Many responses with context using a multi-turn conversation.
-        - The user query and the retrieved content is input to the LLM.
-        - The Output of LLM is a generated refined response.
+        Sends a list of messages (role + content) to the local LLM and returns its response as a string. Wraps Ollama's API call.
         """
-        # Pre-defined prompt template
-        prompt_template = self.prompts[prompt]
+        try:
+            response = ollama.chat(
+                model=self.llm,
+                messages=messages,
+                stream=False,
+                options={"keep_alive": "5m"},
+            )
+            return response["message"]["content"].strip()
+        except Exception as e:
+            logging.error(f"LLM request failed: {e}")
+            return f"LLM Error: {str(e)}"
 
-        # If this is a follow-up, retrieve previous query and response
-        original_query = ""
-        previous_response = ""
+    def prior_messages(self):
+        """
+        Retrieves the most recent messages from conversation history. Each user + assistant pair is effectively 2 messages, so we multiple by 2.
+        """
+        max_messages = self.conversation_limit * 2
+        return self.conversation_history[-max_messages:]
 
+    def handle_chunking(self, input_prompt, multi_turn=False):
+        """
+        Breaks up a large prompt into smaller chunks and queries the model chunk by chunk. Then merges and summarizes the chunked responses into a single final response.
+        """
+        chunks = self.chunk_text(input_prompt)
+        chunked_responses = []
+
+        # Retrieve recent conversation context if multi-turn
+        prior_msgs = self.prior_messages() if multi_turn else []
+
+        # For each chunk, append the chunk to conversation context and query LLM
+        for chunk in chunks:
+            messages = prior_msgs + [{"role": "user", "content": chunk}]
+            response = self.call_llm(messages)
+            chunked_responses.append(response)
+
+        # Summarize all chunked responses
+        summary_prompt = (
+            "You have multiple responses that are each part of a larger document. Merge and summarize them into one concise, well-structured answer.\n\nPartial Responses:\n"
+            + "\n".join(chunked_responses)
+        )
+
+        # Combine the summarized chunks with the user prompt
+        messages = messages + [{"role": "user", "content": summary_prompt}]
+        final_response = self.call_llm(messages)
+
+        # Update the conversation history
+        self.conversation_history.extend(
+            [
+                {"role": "user", "content": input_prompt},
+                {"role": "assistant", "content": final_response},
+            ]
+        )
+        return final_response
+
+    def generate(self, query, context, prompt_format="concise", multi_turn=False):
+        """Generate a response with optional multi-turn conversation support."""
         if multi_turn:
-            for message in reversed(self.conversation_history):
-                if message["role"] == "user" and not original_query:
-                    original_query = message["content"]
+            original_query = ""
+            previous_response = ""
 
-                elif message["role"] == "assistant" and not previous_response:
-                    previous_response = message["content"]
-
-                # Break early if both values are found
+            # Retrieve the most recent user+assistant pair
+            for history in reversed(self.conversation_history):
+                if history["role"] == "user" and not original_query:
+                    original_query = history["content"]
+                elif history["role"] == "assistant" and not previous_response:
+                    previous_response = history["content"]
                 if original_query and previous_response:
                     break
 
-        # Format the prompt accordingly
-        if multi_turn:
-            input = prompt_template.format(
+            # Build prompt using the stored multi-turn pieces
+            input_prompt = self.prompts[prompt_format].format(
+                user_query=query,
+                context=context,
                 original_query=original_query,
                 previous_response=previous_response,
-                user_query=user_query,
-                retrieved_text=retrieved_text,
             )
         else:
-            input = prompt_template.format(
-                user_query=user_query, retrieved_text=retrieved_text
+            # Single-turn prompt
+            input_prompt = self.prompts[prompt_format].format(
+                user_query=query, context=context
             )
 
-        # Handle Chunking if needed
-        if token_count(input) > self.chunking["limit"]:
-            chunks = self.chunk_text(input)
-            chunked_responses = []
-
+        # If token limits exceeded; chunking required
+        if token_count(input_prompt) > self.chunking["limit"]:
+            output = self.handle_chunking(input_prompt, multi_turn)
+        else:
+            # Get prior messages if multi-turn
             if multi_turn:
-                # Multi-turn mode maintains the conversation history
-                for chunk in chunks:
-                    self.conversation_history.append({"role": "user", "content": chunk})
-
-                try:
-                    # Generate response in multi-turn mode
-                    response = ollama.chat(
-                        model=self.llm, messages=self.conversation_history
-                    )
-                    output = response["message"]["content"].strip()
-
-                    # Store agent response in history
-                    self.conversation_history.append(
-                        {"role": "assistant", "content": output}
-                    )
-                    return output
-
-                except Exception as e:
-                    return f"LLM Error: {str(e)}"
-
+                messages = self.prior_messages()
             else:
-                # Process each chunk independently in single-turn mode
-                for chunk in chunks:
-                    try:
-                        response = ollama.generate(model=self.llm, prompt=chunk)
-                        chunked_responses.append(response["response"].strip())
-                    except Exception as e:
-                        chunked_responses.append(f"LLM Error on chunk: {str(e)}")
+                messages = []
+            messages = messages + [{"role": "user", "content": input_prompt}]
+            output = self.call_llm(messages)
 
-                # Merge responses into a coherent answer (this needs work)
-                summary_prompt = f"Here are multiple responses related to the same query:\n\n{'\n'.join(chunked_responses)}\n\nPlease summarize them into a single, well-structured answer."
-
-                try:
-                    response = ollama.generate(model=self.llm, prompt=summary_prompt)
-                    output = response.response.strip()
-
-                    # Store agent response in history
-                    self.conversation_history.append(
-                        {"role": "assistant", "content": output}
-                    )
-
-                    return output
-                except Exception as e:
-                    return f"LLM Summarization Error: {str(e)}"
-
-        # If no chunking required: either Single-Turn or Multi-Turn processing
-        try:
-            if multi_turn:
-                self.conversation_history.append({"role": "user", "content": input})
-
-                # Trim conversation history if it exceeds the limit
-                # Each exchange has 2 messages (one from user, one from agent)
-                if len(self.conversation_history) > self.conversation_limit * 2:
-                    self.conversation_history = self.conversation_history[
-                        -self.conversation_limit * 2 :
-                    ]
-
-                # Call Ollama with full conversation history
-                response = ollama.chat(
-                    model=self.llm, messages=self.conversation_history
-                )
-                output = response["message"]["content"].strip()
-
-                # Store agent response in history
-                self.conversation_history.append(
-                    {"role": "assistant", "content": output}
-                )
-
-            else:
-                # Single-turn mode does not maintain conversation history
-                response = ollama.generate(model=self.llm, prompt=input)
-                output = response.response.strip()
-
-                # Store agent response in history
-                self.conversation_history.append(
-                    {"role": "assistant", "content": output}
-                )
-
-            return output
-
-        except Exception as e:
-            return f"LLM Error: {str(e)}"
+        # Update conversation history
+        self.conversation_history.extend(
+            [
+                {"role": "user", "content": input_prompt},
+                {"role": "assistant", "content": output},
+            ]
+        )
+        return output
 
 
 if __name__ == "__main__":
