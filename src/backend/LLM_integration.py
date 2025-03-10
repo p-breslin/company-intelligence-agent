@@ -13,15 +13,16 @@ class LocalLLM:
     def __init__(
         self, model="llama-instruct", conversation_limit=5, custom_chunking=None
     ):
-        config = ConfigLoader("llmConfig")
-        self.llm = config.get_section("models")[model]
-        self.prompts = config.get_section("prompts")
+        cfg = ConfigLoader("llmConfig")
+        self.llm = cfg.get_section("models")[model]
+        self.prompts = cfg.get_section("prompts")
+        self.chunked_summary = cfg.get_value("chunked_summary")
 
         # Option to pass custom chunk options for testing purposes
         if custom_chunking:
             self.chunking = custom_chunking
         else:
-            self.chunking = config.get_section("chunking")
+            self.chunking = cfg.get_section("chunking")
 
         # Limit on how many user+assistant pairs of messages to keep around
         self.conversation_limit = conversation_limit
@@ -62,11 +63,11 @@ class LocalLLM:
         max_messages = self.conversation_limit * 2
         return self.conversation_history[-max_messages:]
 
-    def handle_chunking(self, input_prompt, multi_turn=False):
+    def handle_chunking(self, query, context, multi_turn=False):
         """
         Breaks up a large prompt into smaller chunks and queries the model chunk by chunk. Then merges and summarizes the chunked responses into a single final response.
         """
-        chunks = self.chunk_text(input_prompt)
+        chunks = self.chunk_text(context)
         logging.info(f"Text split into {len(chunks)} chunks.")
         chunked_responses = []
 
@@ -76,28 +77,29 @@ class LocalLLM:
         # For each chunk, append the chunk to conversation context and query LLM
         for i, chunk in enumerate(chunks):
             logging.info(f"Chunk {i + 1}")
-            messages = prior_msgs + [{"role": "user", "content": chunk}]
+
+            # Give LLM chunking context
+            messages = prior_msgs + [
+                {
+                    "role": "user",
+                    "content": f'###Task:\nYou are tasked with summarizing a chunk of text that belongs to a larger document. This document has been split into multiple smaller documents. You will be given one of these smaller documents. To achieve your task, you will concisely summarize the given document while retaining the critical information and including any numbers or statistics. To do this, you will ONLY use the text from the given document. Be sure to include any information that might help to answer this question: "{query}"\n\n### Document Part {i + 1}/{len(chunks)}:\n{chunk}',
+                }
+            ]
+            logging.debug(messages[0]["content"])
             response = self.call_llm(messages)
-            logging.info(f"\nResponse:\n{chunked_responses}\n\n")
+            logging.debug(f"\nResponse:\n{response}\n\n")
             chunked_responses.append(response)
 
         # Summarize all chunked responses
-        summary_prompt = (
-            "You have multiple responses that are each part of a larger document. Merge them into one cohesive, concise, and well-structured answer.\n\nPartial Responses:\n"
-            + "\n".join(chunked_responses)
+        summary_prompt = self.chunked_summary.format(query=query) + "\n".join(
+            chunked_responses
         )
+        logging.debug(summary_prompt)
 
         # Combine the summarized chunks with the user prompt
         messages = messages + [{"role": "user", "content": summary_prompt}]
         final_response = self.call_llm(messages)
 
-        # Update the conversation history
-        self.conversation_history.extend(
-            [
-                {"role": "user", "content": input_prompt},
-                {"role": "assistant", "content": final_response},
-            ]
-        )
         return final_response
 
     def generate(self, query, context, prompt_format="concise", multi_turn=False):
@@ -132,7 +134,7 @@ class LocalLLM:
         tokens = token_count(input_prompt)
         if tokens > self.chunking["limit"]:
             logging.info(f"Token count = {tokens}")
-            output = self.handle_chunking(input_prompt, multi_turn)
+            output = self.handle_chunking(query, context, multi_turn)
         else:
             logging.info("No chunking required.")
             # Get prior messages if multi-turn
