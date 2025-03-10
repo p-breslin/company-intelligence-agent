@@ -10,11 +10,18 @@ class LocalLLM:
     Wraps a local LLM for conversation-based responses, with the ability to handle multi-turn exchanges and chunk large inputs to avoid token limits.
     """
 
-    def __init__(self, conversation_limit=5):
+    def __init__(
+        self, model="llama-instruct", conversation_limit=5, custom_chunking=None
+    ):
         config = ConfigLoader("llmConfig")
-        self.llm = config.get_section("models")["llama-instruct"]
+        self.llm = config.get_section("models")[model]
         self.prompts = config.get_section("prompts")
-        self.chunking = config.get_section("chunking")
+
+        # Option to pass custom chunk options for testing purposes
+        if custom_chunking:
+            self.chunking = custom_chunking
+        else:
+            self.chunking = config.get_section("chunking")
 
         # Limit on how many user+assistant pairs of messages to keep around
         self.conversation_limit = conversation_limit
@@ -60,20 +67,23 @@ class LocalLLM:
         Breaks up a large prompt into smaller chunks and queries the model chunk by chunk. Then merges and summarizes the chunked responses into a single final response.
         """
         chunks = self.chunk_text(input_prompt)
+        logging.info(f"Text split into {len(chunks)} chunks.")
         chunked_responses = []
 
         # Retrieve recent conversation context if multi-turn
         prior_msgs = self.prior_messages() if multi_turn else []
 
         # For each chunk, append the chunk to conversation context and query LLM
-        for chunk in chunks:
+        for i, chunk in enumerate(chunks):
+            logging.info(f"Chunk {i + 1}")
             messages = prior_msgs + [{"role": "user", "content": chunk}]
             response = self.call_llm(messages)
+            logging.info(f"\nResponse:\n{chunked_responses}\n\n")
             chunked_responses.append(response)
 
         # Summarize all chunked responses
         summary_prompt = (
-            "You have multiple responses that are each part of a larger document. Merge and summarize them into one concise, well-structured answer.\n\nPartial Responses:\n"
+            "You have multiple responses that are each part of a larger document. Merge them into one cohesive, concise, and well-structured answer.\n\nPartial Responses:\n"
             + "\n".join(chunked_responses)
         )
 
@@ -119,9 +129,12 @@ class LocalLLM:
             )
 
         # If token limits exceeded; chunking required
-        if token_count(input_prompt) > self.chunking["limit"]:
+        tokens = token_count(input_prompt)
+        if tokens > self.chunking["limit"]:
+            logging.info(f"Token count = {tokens}")
             output = self.handle_chunking(input_prompt, multi_turn)
         else:
+            logging.info("No chunking required.")
             # Get prior messages if multi-turn
             if multi_turn:
                 messages = self.prior_messages()
