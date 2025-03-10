@@ -9,7 +9,7 @@
     },
 
     "chunking": {
-        "size": 1000,
+        "size": 5000,
         "overlap": 50,
         "limit": 120000
     },
