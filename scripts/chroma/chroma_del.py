@@ -4,12 +4,12 @@ import chromadb
 from utils.config import config
 
 
-def clear_chroma(configs):
+def clear_chroma(cfg):
     """Deletes the Chroma database."""
     try:
         # Deletes everything inside the folder
-        if os.path.exists(configs["root"]):
-            shutil.rmtree(configs["root"])
+        if os.path.exists(cfg["root"]):
+            shutil.rmtree(cfg["root"])
             print("ChromaDB storage deleted successfully.")
         else:
             print("ChromaDB storage folder not found.")
@@ -18,16 +18,16 @@ def clear_chroma(configs):
         print(f"An error occurred while deleting ChromaDB storage: {e}")
 
 
-def list_collections(configs):
+def list_collections(cfg):
     """
     Lists all collections in ChromaDB.
     Trying to connect to a client creates a new database; first check it's existence.
     """
-    if not os.path.exists(configs["root"]):
+    if not os.path.exists(cfg["root"]):
         print("No collection to list.")
         return
 
-    client = chromadb.PersistentClient(path=configs["root"])
+    client = chromadb.PersistentClient(path=cfg["root"])
     collections = client.list_collections()
 
     if not collections:
@@ -39,6 +39,6 @@ def list_collections(configs):
 
 
 if __name__ == "__main__":
-    configs = config.get_section("chroma")
-    clear_chroma(configs)
-    list_collections(configs)
+    cfg = config.get_section("chroma")
+    clear_chroma(cfg)
+    list_collections(cfg)

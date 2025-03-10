@@ -8,12 +8,12 @@ from utils.config import ConfigLoader
 class GraphDBHandler:
     def __init__(self):
         load_dotenv()
-        config = ConfigLoader("config").get_section("arango")
+        cfg = ConfigLoader("config").get_section("arango")
         try:
-            client = ArangoClient(hosts=f"http://localhost:{config['port']}")
+            client = ArangoClient(hosts=f"http://localhost:{cfg['port']}")
             self.db = client.db(
-                config["dbname"],
-                username=config["user"],
+                cfg["dbname"],
+                username=cfg["user"],
                 password=os.getenv("ARANGO_PWD"),
             )
         except Exception as e:

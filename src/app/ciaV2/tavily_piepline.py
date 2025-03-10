@@ -3,18 +3,10 @@ import asyncio
 import logging
 import subprocess
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from tavily import AsyncTavilyClient
 from utils.config import ConfigLoader
-from backend.LLM_integration import LocalLLM
-from ciaV2.firecrawl_extract import FirecrawlScraper
-
-
-class CompetitorInfo(BaseModel):
-    company: str
-    products: list[str]
-    strengths: list[str]
-    weaknesses: list[str]
+from app.main.local_LLM import LocalLLM
+from app.ciaV2.firecrawl_extract import FirecrawlScraper
 
 
 class TavilySearch:
@@ -25,7 +17,7 @@ class TavilySearch:
         self.llm = LocalLLM()
 
         # Tavily
-        self.config = ConfigLoader("config").get_section("tavily")
+        self.cfg = ConfigLoader("config").get_section("tavily")
         self.client = AsyncTavilyClient(os.getenv("TAVILY_API_KEY"))
         self.search_params = {
             "search_depth": "basic",
@@ -40,7 +32,7 @@ class TavilySearch:
 
     async def get_products(self, company):
         """Web searches the biggest products for the given company."""
-        query = self.config["prompt_products"].format(company=company)
+        query = self.cfg["prompt_products"].format(company=company)
         response = await self.client.search(query, **self.search_params)
         logging.info("Product search complete.")
 
@@ -51,7 +43,7 @@ class TavilySearch:
 
     async def get_competitors(self, company):
         """Web searches the biggest competitors for the given company."""
-        query = self.config["prompt_competitors"].format(company=company)
+        query = self.cfg["prompt_competitors"].format(company=company)
         response = await self.client.search(query, **self.search_params)
         logging.info("Competitors search complete.")
 
@@ -69,8 +61,6 @@ class TavilySearch:
         products, competitors = await asyncio.gather(
             self.get_products(company), self.get_competitors(company)
         )
-
-        # Start Firecrawl AFTER all links are collected
 
         # Start Firecrawl as a background process
         firecrawl_task = subprocess.Popen(

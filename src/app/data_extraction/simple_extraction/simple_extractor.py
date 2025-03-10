@@ -4,7 +4,7 @@ from utils.config import config
 from .rss_handler import RSSHandler
 from .simple_scraper import WebScraper
 from utils.helpers import store_to_postgres
-from backend.weaviate_pipeline import GenerateEmbeddings
+from app.main.weaviate_embeddings import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.INFO,

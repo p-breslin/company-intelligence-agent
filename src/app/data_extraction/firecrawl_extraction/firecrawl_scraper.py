@@ -39,8 +39,8 @@ class FireCrawlScraper:
             self.feeds = feeds
             self.cur = db_conn.cursor()
 
-            config = ConfigLoader("API_KEYS")
-            api_key = config.get_value("firecrawl")
+            cfg = ConfigLoader("API_KEYS")
+            api_key = cfg.get_value("firecrawl")
             if not api_key:
                 raise ValueError("API key is missing. Please check config.")
             self.app = FirecrawlApp(api_key=api_key)

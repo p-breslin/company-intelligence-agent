@@ -2,8 +2,8 @@ import logging
 import psycopg
 from utils.config import config
 from utils.helpers import store_to_postgres
-from ciaV2.structure_data import StructureData
-from backend.weaviate_pipeline import GenerateEmbeddings
+from app.ciaV2.structure_data import StructureData
+from app.main.weaviate_embeddings import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

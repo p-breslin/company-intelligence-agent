@@ -3,8 +3,8 @@ import weaviate
 import weaviate.classes as wvc
 from utils.config import config
 
-config = config.get_section("weaviate")
-client = weaviate.connect_to_local(port=config["port"])
+cfg = config.get_section("weaviate")
+client = weaviate.connect_to_local(port=cfg["port"])
 
 try:
     # Delete all schemas (which deletes all data)
@@ -19,15 +19,15 @@ try:
                 data_type=wvc.config.DataType(field["dataType"]),
                 skip_vectorization=field["skip"],
             )
-            for field in config["schema"]
+            for field in cfg["schema"]
         ]
 
         client.collections.create(
-            name=config["dbname"],
+            name=cfg["dbname"],
             vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_contextionary(),
             properties=schema,
         )
-        print(f"Created schema for {config['dbname']}")
+        print(f"Created schema for {cfg['dbname']}")
 
     except Exception as e:
         logging.error(f"Error creating database: {e}")

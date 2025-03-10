@@ -1,8 +1,8 @@
 import feedparser
 import pandas as pd
 from utils.config import config
-from backend.rss_handler import RSSHandler
-from backend.web_scraper import Webcraper
+from app.data_extraction.simple_extraction.rss_handler import RSSHandler
+from app.data_extraction.simple_extraction.simple_scraper import Webcraper
 
 
 class TestDataExtraction:
@@ -77,6 +77,5 @@ class TestDataExtraction:
 
 
 if __name__ == "__main__":
-
     test = TestDataExtraction()
     test.run()

@@ -11,22 +11,22 @@ logging.basicConfig(
 
 # Load environment variables
 load_dotenv()
-config = ConfigLoader("config").get_section("arango")
+cfg = ConfigLoader("config").get_section("arango")
 
 try:
     # Connect to ArangoDB server
-    client = ArangoClient(hosts=f"http://localhost:{config['port']}")
+    client = ArangoClient(hosts=f"http://localhost:{cfg['port']}")
 
     try:
         # Authenticate with root user (required to manage databases)
         sys_db = client.db("_system", username="root", password=os.getenv("ARANGO_PWD"))
 
         # Check if the database exists, then delete it
-        if sys_db.has_database(config["dbname"]):
-            sys_db.delete_database(config["dbname"])
-            print(f"Database '{config['dbname']}' deleted successfully.")
+        if sys_db.has_database(cfg["dbname"]):
+            sys_db.delete_database(cfg["dbname"])
+            print(f"Database '{cfg['dbname']}' deleted successfully.")
         else:
-            print(f"Database '{config['dbname']}' does not exist.")
+            print(f"Database '{cfg['dbname']}' does not exist.")
 
     except Exception as e:
         logging.error(f"Failed to authenticate with root: {e}")

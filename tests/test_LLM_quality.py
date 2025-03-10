@@ -1,7 +1,7 @@
 import ollama
 import pandas as pd
 from utils.config import ConfigLoader
-from backend.LLM_integration import LocalLLM
+from app.main.local_LLM import LocalLLM
 
 
 class TestLLM:

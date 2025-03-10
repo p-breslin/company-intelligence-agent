@@ -1,6 +1,6 @@
 import logging
 from utils.config import ConfigLoader
-from backend.LLM_integration import LocalLLM
+from app.main.local_LLM import LocalLLM
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

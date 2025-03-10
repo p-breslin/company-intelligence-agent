@@ -7,14 +7,14 @@ logging.basicConfig(
     format="%(levelname)s - %(message)s",
 )
 
-config = config.get_section("weaviate")
+cfg = config.get_section("weaviate")
 
 try:
-    client = weaviate.connect_to_local(port=config["port"])
+    client = weaviate.connect_to_local(port=cfg["port"])
     logging.info(client.is_ready())
 
     try:
-        articles = client.collections.get(config["dbname"])
+        articles = client.collections.get(cfg["dbname"])
 
         try:
             response = articles.query.near_text(

@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from arango import ArangoClient
 from utils.config import ConfigLoader
-from ciaV2.structure_data import StructureData
+from app.ciaV2.structure_data import StructureData
 
 logging.basicConfig(
     level=logging.INFO,

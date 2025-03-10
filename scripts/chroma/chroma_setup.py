@@ -4,11 +4,11 @@ from utils.config import config
 
 def setup():
     """Initializes a persistent ChromaDB collection for storing embeddings."""
-    configs = config.get_section("chroma")
-    client = chromadb.PersistentClient(path=configs["root"])
+    cfg = config.get_section("chroma")
+    client = chromadb.PersistentClient(path=cfg["root"])
 
     # Creates a collection for storing the embeddings
-    collection = client.get_or_create_collection(name=configs["dbname"])
+    collection = client.get_or_create_collection(name=cfg["dbname"])
 
     print("ChromaDB initialized successfully.")
     return collection

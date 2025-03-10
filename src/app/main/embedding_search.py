@@ -2,7 +2,7 @@ import logging
 import chromadb
 import weaviate
 from utils.config import config
-from backend.LLM_integration import LocalLLM
+from app.main.local_LLM import LocalLLM
 
 
 class EmbeddingSearch:
@@ -14,12 +14,12 @@ class EmbeddingSearch:
         # Initialize database client and collection
         self.client = None
         self.database = database
-        self.config = config.get_section(database)
+        self.cfg = config.get_section(database)
 
         if database == "weaviate":
             try:
-                self.client = weaviate.connect_to_local(port=self.config["port"])
-                self.collection = self.client.collections.get(self.config["dbname"])
+                self.client = weaviate.connect_to_local(port=self.cfg["port"])
+                self.collection = self.client.collections.get(self.cfg["dbname"])
                 logging.info("Weaviate initialized successfully.")
             except Exception as e:
                 logging.error(f"Weaviate Initialization Failed: {e}")
@@ -27,9 +27,9 @@ class EmbeddingSearch:
 
         elif database == "chroma":
             try:
-                self.client = chromadb.PersistentClient(path=self.config["root"])
+                self.client = chromadb.PersistentClient(path=self.cfg["root"])
                 self.collection = self.client.get_or_create_collection(
-                    name=self.config["dbname"]
+                    name=self.cfg["dbname"]
                 )
                 logging.info("ChromaDB initialized successfully.")
             except Exception as e:
@@ -60,7 +60,7 @@ class EmbeddingSearch:
 
             # Results are stored in a list of Objects
             for obj in self.results.objects:
-                for field in self.config["fields"]:
+                for field in self.cfg["fields"]:
                     retrieved_data[field] = obj.properties[field]
                 break
 

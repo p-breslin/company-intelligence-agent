@@ -3,7 +3,7 @@ import psycopg
 from utils.config import config
 from utils.helpers import store_to_postgres
 from .firecrawl_call import FireCrawlScraper
-from backend.weaviate_pipeline import GenerateEmbeddings
+from app.main.weaviate_embeddings import GenerateEmbeddings
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

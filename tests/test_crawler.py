@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from utils.config import config
-from backend.crawler import CrawlLinks
+from app.data_extraction.smart_extraction.crawler import CrawlLinks
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

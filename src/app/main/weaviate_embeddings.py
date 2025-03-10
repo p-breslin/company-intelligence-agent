@@ -1,6 +1,5 @@
 import logging
 import weaviate
-import weaviate.classes as wvc
 from utils.config import config
 from utils.helpers import import_postgres_data
 

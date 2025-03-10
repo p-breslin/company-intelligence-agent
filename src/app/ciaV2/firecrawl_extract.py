@@ -8,7 +8,7 @@ from firecrawl import FirecrawlApp
 from pydantic import BaseModel, Field
 from utils.config import ConfigLoader
 from utils.helpers import generate_hash
-from ciaV2.data_storage import store_data
+from app.ciaV2.data_storage import store_data
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

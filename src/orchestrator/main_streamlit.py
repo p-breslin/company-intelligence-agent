@@ -1,7 +1,7 @@
 import logging
 import streamlit as st
-from backend.LLM_integration import LocalLLM
-from orchestrator.embedding_search import EmbeddingSearch
+from app.main.local_LLM import LocalLLM
+from app.main.embedding_search import EmbeddingSearch
 
 logging.basicConfig(level=logging.INFO)
 
@@ -9,7 +9,6 @@ logging.basicConfig(level=logging.INFO)
 def main():
     LLM = LocalLLM()
     database = "weaviate"
-    API_BASE_URL = "http://localhost:8501"
 
     # Stores chat history
     if "chat_history" not in st.session_state:

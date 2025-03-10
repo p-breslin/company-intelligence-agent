@@ -15,7 +15,6 @@ test2 = [
     {"role": "user", "content": context},
 ]
 
-
 LLMs = [
     "llama3.2:1b",
     "granite3.2:2b",

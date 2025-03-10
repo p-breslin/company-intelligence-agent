@@ -47,14 +47,14 @@ class ScraperAI:
             self.crawler = CrawlLinks()
 
             # Pre-defined LLM prompt
-            config = ConfigLoader("llmConfig")
-            self.prompt = config.get_value("data_extraction_prompt")
-            self.model = config.get_section("models")[LLM]
+            cfg = ConfigLoader("llmConfig")
+            self.prompt = cfg.get_value("data_extraction_prompt")
+            self.model = cfg.get_section("models")[LLM]
 
             # API keys
-            config = ConfigLoader("API_KEYS")
-            self.jina_key = config.get_value("jina")  # Jina.ai reader
-            llm_key = config.get_value(LLM)  # LLM API key
+            cfg = ConfigLoader("API_KEYS")
+            self.jina_key = cfg.get_value("jina")  # Jina.ai reader
+            llm_key = cfg.get_value(LLM)  # LLM API key
 
             if not llm_key:
                 raise ValueError("LLM API key missing. Please check config.")

@@ -16,9 +16,9 @@ Key Features:
 
 import logging
 from fastapi import FastAPI, Query
-from backend.LLM_integration import LocalLLM
+from app.main.local_LLM import LocalLLM
 from fastapi.middleware.cors import CORSMiddleware
-from orchestrator.embedding_search import EmbeddingSearch
+from app.main.embedding_search import EmbeddingSearch
 
 logging.basicConfig(
     level=logging.INFO,

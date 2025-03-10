@@ -2,7 +2,7 @@ import json
 import ollama
 import logging
 from utils.config import ConfigLoader
-from ciaV2.arango_pipeline import GraphDBHandler
+from app.ciaV2.arango_pipeline import GraphDBHandler
 
 
 class StructureData:
