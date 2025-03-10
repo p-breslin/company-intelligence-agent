@@ -28,8 +28,8 @@ class GraphDBHandler:
         # Vertex and Edge collections
         self.articles = self.db.collection("Articles")
         self.companies = self.db.collection("Companies")
-        self.products = self.db.collection("Products")
-        self.produces = self.db.collection("Produces")
+        # self.products = self.db.collection("Products")
+        # self.produces = self.db.collection("Produces")
         self.competes = self.db.collection("CompetesWith")
 
     def insert_company(self, company_name):
