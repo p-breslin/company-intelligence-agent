@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from tavily import AsyncTavilyClient
 from utils.config import ConfigLoader
 from backend.LLM_integration import LocalLLM
-from firecrawl_extract import FirecrawlScraper
+from ciaV2.firecrawl_extract import FirecrawlScraper
 
 
 class CompetitorInfo(BaseModel):
@@ -32,7 +32,7 @@ class TavilySearch:
             "max_results": 2,
             "include_answer": "basic",
             "time_range": "month",
-            "topic": "news"
+            "topic": "news",
         }
 
         # Firecrawl
@@ -79,7 +79,6 @@ class TavilySearch:
             stderr=subprocess.DEVNULL,
         )
         logging.info("Firecrawl started in the background.")
-
         # self.extract.run(self.links)
 
         return {

@@ -47,18 +47,6 @@ class StructureData:
                     f"Companies/{competitor_key}",
                 )
 
-            # # Have yet to handle products
-            # products = data.get("products", [])
-            # for product_name in products:
-            #     product_key = self.graph_handler.insert_product(product_name)
-            #     # Create 'Produces' edge
-            #     self.graph_handler.create_relationship(
-            #         "Produces",
-            #         f"Companies/{company_key}",
-            #         f"Products/{product_key}"
-            #     )
-            # logging.info(f"Stored {len(products)} product relationships for {company}.")
-
         except Exception as e:
             logging.error(f"Error while inserting data into ArangoDB: {e}")
 

@@ -5,10 +5,10 @@ import logging
 from typing import List
 from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
-from data_storage import store_data
 from pydantic import BaseModel, Field
 from utils.config import ConfigLoader
 from utils.helpers import generate_hash
+from ciaV2.data_storage import store_data
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -30,14 +30,14 @@ class FirecrawlScraper:
     def __init__(self):
         load_dotenv()
         self.app = FirecrawlApp(os.getenv("FIRECRAWL_API"))
-        self.config = ConfigLoader("config").get_section("firecrawl")
+        self.cfg = ConfigLoader("config").get_section("firecrawl")
 
     def async_batch_scrape(self, links):
         """Uses Firecrawl's batch extraction to scrape list of URL links."""
         try:
             # Define the extraction parameters
             extract_params = {
-                "prompt": self.config["extract_prompt"],
+                "prompt": self.cfg["extract_prompt"],
                 "schema": ExtractSchema.model_json_schema(),
             }
 
@@ -86,6 +86,7 @@ class FirecrawlScraper:
             for article in articles:
                 article["hash"] = generate_hash(article["link"])
         store_data(articles)
+
 
 
 # Entry point for subprocess execution

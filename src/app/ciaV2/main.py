@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import streamlit as st
-from tavily_piepline import search_engine
+from ciaV2.tavily_piepline import search_engine
 from backend.LLM_integration import LocalLLM
 from orchestrator.embedding_search import EmbeddingSearch
 

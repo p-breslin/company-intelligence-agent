@@ -2,6 +2,7 @@ import logging
 import psycopg
 from utils.config import config
 from utils.helpers import store_to_postgres
+from ciaV2.structure_data import StructureData
 from backend.weaviate_pipeline import GenerateEmbeddings
 
 logging.basicConfig(
