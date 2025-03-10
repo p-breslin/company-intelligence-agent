@@ -20,15 +20,8 @@ class StructureData:
             stream=False,
             options={"keep_alive": "1m"},
         )
-        data = response["message"]["content"]
-
-        # Parse JSON from the LLM response
-        try:
-            json.loads(data)
-            self.graph_storage(data)
-        except Exception as e:
-            logging.warning(f"LLM returned invalid JSON. Error: {str(e)}")
-            return
+        logging.info(f"LLM response:\n{response['message']['content']}")
+        return response["message"]["content"]
 
     def graph_storage(self, data):
         try:
@@ -71,3 +64,13 @@ class StructureData:
 
         except Exception as e:
             logging.error(f"Error while inserting data into ArangoDB: {e}")
+
+    def run(self, company, context):
+        # Parse JSON from the LLM response
+        data = self.call_llm(company, context)
+        try:
+            json.loads(data)
+            self.graph_storage(data)
+        except Exception as e:
+            logging.warning(f"LLM returned invalid JSON. Error: {str(e)}")
+            return
