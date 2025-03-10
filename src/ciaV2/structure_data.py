@@ -2,7 +2,7 @@ import json
 import ollama
 import logging
 from utils.config import ConfigLoader
-from arango_pipeline import GraphDBHandler
+from ciaV2.arango_pipeline import GraphDBHandler
 
 
 class StructureData:
@@ -20,7 +20,8 @@ class StructureData:
             stream=False,
             options={"keep_alive": "1m"},
         )
-        logging.info(f"LLM response:\n{response['message']['content']}")
+        logging.info("Structured data generated.")
+        logging.debug(f"LLM response:\n{response['message']['content']}")
         return response["message"]["content"]
 
     def graph_storage(self, data):
@@ -46,10 +47,6 @@ class StructureData:
                     f"Companies/{competitor_key}",
                 )
 
-            logging.info(
-                f"Stored {len(competitors)} competitor relationships for {company}."
-            )
-
             # # Have yet to handle products
             # products = data.get("products", [])
             # for product_name in products:
@@ -67,9 +64,9 @@ class StructureData:
 
     def run(self, company, context):
         # Parse JSON from the LLM response
-        data = self.call_llm(company, context)
+        data_str = self.call_llm(company, context)
         try:
-            json.loads(data)
+            data = json.loads(data_str)
             self.graph_storage(data)
         except Exception as e:
             logging.warning(f"LLM returned invalid JSON. Error: {str(e)}")
