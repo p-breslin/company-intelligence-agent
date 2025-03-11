@@ -96,7 +96,7 @@ company-intelligence-agent/
    ```
 6. Choose a data extraction method:
    ```bash
-   cd src/app/data_extraction/
+   python path/to/your_chosen_data_extractor.py
    ```
 7. Good to go!
 
