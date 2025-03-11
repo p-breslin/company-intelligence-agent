@@ -9,7 +9,7 @@ The **Company Intelligence Agent** is designed to monitor and analyze company-re
 ### Features
 
 - **Automated Content Collection**  
-  Collects data from configurable RSS feeds and web sources (blogs, websites, etc.).
+  Collects data from web sources (blogs, websites, etc.).
 
 - **Intelligent Categorization**  
   Leverages an LLM to classify or cluster collected content into meaningful categories.
@@ -32,18 +32,20 @@ The **Company Intelligence Agent** is designed to monitor and analyze company-re
 ```
 company-intelligence-agent/
 |
-├── scripts/                 # Routine scripts for initial set-up
-│   ├── postgres_init.py     # Sets up the postgreSQL user, database, and table locally
-│   ├── chroma_init.py       # Sets up the ChromaDB database locally
-│   ├── embedding_model.py   # Populates the ChromaDB database with vector embeddings
+├── scripts/                 # Routine scripts for initial setup
+│   ├── arango/              # ArangoDB setup scripts for local graph storage
+│   ├── chroma/              # ChromaDB setup scripts for local vector storage
+│   ├── postgres/            # PostgreSQL setup scripts for local SQL storage
+│   ├── weaviate/            # Weaviate setup scripts for local vector storage
+│   ├── database_init.py     # Orchestrates setup for databases used
 |
 │── src/                     # Main source code
-│   │── backend/             # Backend code (Data pipeline, LLM integration)
-│   │── frontend/            # Frontend code (React, Node.js)
-│   │── orchestrator/        # Manages content ingestion (FastAPI) and updates
+│   │── app/                 # Core application logic
+│   │── web/                 # Web application code (React, Node.js)
+│   │── orchestrator/        # Manages API calls between frontend and backend
 │   │── utils/               # Helper functions and additional utilities
 │
-│── configs/                 # Config files (e.g., env variables, settings)
+│── configs/                 # Configuration files
 │── tests/                   # Unit and integration tests
 │── docs/                    # Documentation (API specs, setup guide)
 │── .gitignore               # Ignore unnecessary files
@@ -82,20 +84,19 @@ company-intelligence-agent/
    ```bash
    pip install -e .
    ```
-4. Install frontend dependencies:
+4. Install UI dependencies:
    ```bash
-   cd src/frontend
+   cd src/web
    npm install
    cd ../..
    ```
-5. Set up and initialize the postgreSQL and ChromaDB databases:
+5. Set up and initialize the databases:
    ```bash
-   python scripts/postgres_init.py
-   python scripts/chroma_init.py
+   python scripts/database_init.py
    ```
-6. Begin data extraction:
+6. Choose a data extraction method:
    ```bash
-   python src/backend/data_extraction.py
+   cd src/app/data_extraction/
    ```
 7. Good to go!
 
@@ -103,7 +104,7 @@ company-intelligence-agent/
 
 1. **Run the run file from the project root:** `./run.sh`
 
-- This launches a FastAPI server (main.py in src/orchestrator) that handles data ingestion, categorization, and LLM queries.
+- This launches a FastAPI server (main.py in src/app/orchestrator) that handles data ingestion, categorization, and LLM queries.
 - It also navigates to src/frontend and runs the web interface via `npm run dev`
 - Access the web interface at http://localhost:5173 (or whichever port is configured).
 
@@ -126,7 +127,7 @@ company-intelligence-agent/
 
 ## Troubleshooting
 
-- **Database Issues:** Verify your PostgreSQL or Chroma instance is running and configured properly in any relevant scripts or environment variables.
+- **Database Issues:** Verify your PostgreSQL or Chroma or Weaviate instance is running and configured properly in any relevant scripts or environment variables.
 - **Missing Dependencies:** Double-check you installed everything in requirements.txt (for Python) and package.json (for Node).
 - **CORS or Network Errors:** If requests are blocked, adjust the FastAPI or React dev server settings to allow cross-origin requests.
 - **Ollama Errors:** Ensure Ollama is installed and running if you rely on local LLM inference.
