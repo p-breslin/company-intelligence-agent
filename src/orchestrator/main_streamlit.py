@@ -38,7 +38,7 @@ def main():
                 retrieved_data, LLM_context = vector_search.run()
                 logging.info("Generating response...")
                 status.update(label="Querying LLM...", state="running")
-                llm_response = LLM.generate_response(query, LLM_context)
+                llm_response = LLM.generate(query, LLM_context)
                 status.update(
                     label="Extraction complete!", state="complete", expanded=False
                 )
@@ -69,10 +69,10 @@ def main():
             if st.button("Submit Follow-Up"):
                 logging.info("Generating follow-up response...")
                 with st.status("Querying LLM...", expanded=True) as status:
-                    follow_up_response = LLM.generate_response(
+                    follow_up_response = LLM.generate(
                         follow_up_query,
-                        retrieved_text=st.session_state.last_context,
-                        prompt="follow_up",
+                        context=st.session_state.last_context,
+                        prompt_format="follow_up",
                         multi_turn=True,
                     )
                     status.update(

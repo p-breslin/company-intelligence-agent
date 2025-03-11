@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 UVICORN_PID=$!
 
 # Start the React frontend
-(cd src/frontend && npm run dev) & 
+(cd src/web && npm run dev) & 
 REACT_PID=$!
 
 # Trap SIGINT (CTRL + C) and kill background processes

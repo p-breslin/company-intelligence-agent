@@ -46,7 +46,7 @@ class CIA:
 
             # Generate refined response using Local LLM (single-turn)
             logging.info("Generating response...")
-            llm_response = self.LLM.generate_response(query, LLM_context)
+            llm_response = self.LLM.generate(query, LLM_context)
 
             # Store chat history AND* the full article (*once per session)
             if session_id:
@@ -67,14 +67,14 @@ class CIA:
 
             # Retrieve full article from cache if available
             logging.info("Retrieving full-article content from cache")
-            retrieved_text = self.cache[session_id].get("full_article", "")
+            context = self.cache[session_id].get("full_article", "")
 
             # Generate response using conversation history (multi-turn)
             logging.info("Generating the follow-up response...")
-            llm_response = self.LLM.generate_response(
+            llm_response = self.LLM.generate(
                 query,
-                retrieved_text=retrieved_text,
-                prompt="follow_up",
+                context=context,
+                prompt_format="follow_up",
                 multi_turn=True,
             )
 
