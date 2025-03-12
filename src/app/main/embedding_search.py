@@ -6,7 +6,7 @@ from app.main.local_LLM import LocalLLM
 
 
 class EmbeddingSearch:
-    def __init__(self, query, database):
+    def __init__(self, query, database="weaviate"):
         self.LLM = LocalLLM()
         self.results = None
         self.query = query

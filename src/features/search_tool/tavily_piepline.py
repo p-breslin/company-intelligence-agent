@@ -17,7 +17,7 @@ class TavilySearch:
         self.llm = LocalLLM()
 
         # Tavily
-        self.cfg = ConfigLoader("config").get_section("tavily")
+        self.cfg = ConfigLoader("config").get_section("TAVILY")
         self.client = AsyncTavilyClient(os.getenv("TAVILY_API_KEY"))
         self.search_params = {
             "search_depth": "basic",
