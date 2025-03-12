@@ -8,7 +8,7 @@ from firecrawl import FirecrawlApp
 from pydantic import BaseModel, Field
 from utils.config import ConfigLoader
 from utils.helpers import generate_hash
-from app.ciaV2.data_storage import store_data
+from features.search_tool.data_storage import store_data
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -86,7 +86,6 @@ class FirecrawlScraper:
             for article in articles:
                 article["hash"] = generate_hash(article["link"])
         store_data(articles)
-
 
 
 # Entry point for subprocess execution

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from tavily import AsyncTavilyClient
 from utils.config import ConfigLoader
 from app.main.local_LLM import LocalLLM
-from app.ciaV2.firecrawl_extract import FirecrawlScraper
+from features.search_tool.firecrawl_extract import FirecrawlScraper
 
 
 class TavilySearch:
