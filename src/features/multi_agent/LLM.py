@@ -28,17 +28,18 @@ def call_llm(client, messages, schema=False):
             response = client.chat.completions.create(
                 model="gpt-4o-mini-2024-07-18",
                 messages=messages,
-                tools=[schema],
-                tool_choice="company_info",
+                response_format=schema,
             )
-            logging.info(f"ChatGPT structured response: {response}")
-            return response
+            content = response.choices[0].message.content
+            logging.info(f"ChatGPT structured response: {content}")
+            return content
         else:
             response = client.chat.completions.create(
                 model="gpt-4o-mini-2024-07-18", messages=messages
             )
-            logging.info(f"ChatGPT unstructured response: {response}")
-            return response
+            content = response.choices[0].message.content
+            logging.info(f"ChatGPT unstructured response: {content}")
+            return content
 
     except Exception as e:
         logging.error(f"ChatGPT request failed: {e}")
