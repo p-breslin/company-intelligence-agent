@@ -4,23 +4,25 @@ from dataclasses import dataclass, field
 
 # Specific to OpenAI API
 DEFAULT_SCHEMA = {
-    "name": "company_info",
-    "description": "Basic information about a company",
-    "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "company_name": {
-                "type": "string",
-                "description": "Official name of the company",
+    "type": "json_schema",
+    "json_schema": {
+        "name": "company_info",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "type": "string",
+                    "description": "Official name of the company",
+                },
+                "product_description": {
+                    "type": "string",
+                    "description": "Brief description of the company's main product or service",
+                },
             },
-            "product_description": {
-                "type": "string",
-                "description": "Brief description of the company's main product or service",
-            },
+            "additionalProperties": False,
+            "required": ["company_name", "product_description"],
         },
-        "additionalProperties": False,
-        "required": ["company_name", "product_description"],
+        "strict": True,
     },
 }
 
