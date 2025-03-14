@@ -32,6 +32,7 @@ def call_llm(client, messages, schema=False):
             )
             content = response.choices[0].message.content
             logging.info(f"ChatGPT structured response: {content}")
+            logging.info(f"Token usage: {response.usage.total_tokens}")
             return content
         else:
             response = client.chat.completions.create(
@@ -39,6 +40,7 @@ def call_llm(client, messages, schema=False):
             )
             content = response.choices[0].message.content
             logging.info(f"ChatGPT unstructured response: {content}")
+            logging.info(f"Token usage: {response.usage.total_tokens}")
             return content
 
     except Exception as e:
