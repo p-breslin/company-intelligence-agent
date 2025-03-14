@@ -1,7 +1,7 @@
 import logging
 import chromadb
 import weaviate
-from utils.config import config
+from utils.config import ConfigLoader
 from app.main.local_LLM import LocalLLM
 
 
@@ -14,7 +14,7 @@ class EmbeddingSearch:
         # Initialize database client and collection
         self.client = None
         self.database = database
-        self.cfg = config.get_section(database)
+        self.cfg = ConfigLoader("config").get_section(database)
 
         if database == "weaviate":
             try:
@@ -64,8 +64,11 @@ class EmbeddingSearch:
                     retrieved_data[field] = obj.properties[field]
                 break
 
-            llm_context = retrieved_data["content"]
-            return retrieved_data, llm_context
+            if retrieved_data:
+                llm_context = retrieved_data["content"]
+                return retrieved_data, llm_context
+            else:
+                return None, None
 
         if self.database == "chroma":
             # docs is list of strings; metadatas is list of metadata dicts
