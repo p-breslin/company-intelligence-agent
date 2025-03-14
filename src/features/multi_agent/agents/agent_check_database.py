@@ -20,7 +20,7 @@ class DatabaseAgent(BaseAgent):
             await self.check_database()
 
     async def check_database(self) -> None:
-        logging.info(f"{self.name} is checking the database...")
+        logging.info(f"[{self.name}] Checking the database...")
 
         vector_search = EmbeddingSearch(self.state.company)
         metadata, docs = vector_search.run()
@@ -42,5 +42,5 @@ class DatabaseAgent(BaseAgent):
                     "raw_content": None,
                 }
             ]
-            # Publish DB_CHECK_DONE for other agents to proceed
+            logging.info(f"[{self.name}] Publishing DB_CHECK_DONE event.")
             await self.publish_event(EventType.DB_CHECK_DONE)
