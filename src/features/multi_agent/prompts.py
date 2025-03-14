@@ -21,7 +21,7 @@ Your query should:
 Create a focused query that will maximize the chances of finding schema-relevant information."""
 
 
-RESEARCH_PROMPT = """You are doing web research on a company, {company}. 
+RESEARCH_PROMPT = """You are doing research on a company, {company}. 
 
 The following schema shows the type of information we're interested in:
 
@@ -29,7 +29,7 @@ The following schema shows the type of information we're interested in:
 {schema}
 </schema>
 
-You have just scraped website content. Your task is to take clear, organized notes about the company, focusing on topics relevant to our interests.
+You have just scraped website content. Your task is to take clear, organized notes about the company, focusing on topics relevant to our interests. You will do this using the scraped website content ONLY.
 
 <Website contents>
 {context}
@@ -51,7 +51,7 @@ EXTRACTION_PROMPT = """Your task is to take notes gathered from web research and
 {schema}
 </schema>
 
-Here are all the notes from research:
+Here are all the notes from research, you are only allowed to use this information ONLY:
 
 <web_research_notes>
 {research}
