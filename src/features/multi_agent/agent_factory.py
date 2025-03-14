@@ -15,7 +15,6 @@ from features.multi_agent.prompts import (
     QUERY_GENERATOR_PROMPT,
     RESEARCH_PROMPT,
     EXTRACTION_PROMPT,
-    REVISION_PROMPT,
 )
 
 
@@ -33,17 +32,15 @@ async def run_research_pipeline(company: str) -> OverallState:
     3) Use Tavily to get new data (Step 3).
     4) Compile research notes (Step 4).
     5) Extract structured JSON (Step 5).
-    6) Check completeness and revise if needed (Step 6).
     """
     # Initialize shared state
     state = OverallState(company=company)
 
-    # Step 1: Check vector/graph database
-    db_has_data = await agent_check_database(state)
-    if db_has_data:
-        logging.info("Information found in database; compiling research.")
-        # We assume we stored initial data in state.search_results or research.
-        await agent_compile_research(state)
+    # Step 1: Check database for relevant data
+    db_check = await agent_check_database(state)
+    if db_check:
+        logging.info("Relevant information in database; compiling research.")
+        await agent_compile_research(state)  # Compile research from stored data
     else:
         # Step 2: Generate queries
         agent_generate_queries(state)
@@ -51,19 +48,13 @@ async def run_research_pipeline(company: str) -> OverallState:
         # Step 3: Tavily web search
         await agent_web_search(state)
 
-        # Step 4: Compile research from fresh Tavily data
+        # Step 4: Compile research from search data
         await agent_compile_research(state)
 
     # Step 5: Extract structured JSON from the compiled research
     agent_extract_schema(state)
 
-    # # Step 6: Check completeness and revise (example: one pass)
-    # if not agent_revise_results(state):
-    #     # If still incomplete, you could loop or do additional queries here
-    #     # For simplicity, we'll stop after one revision pass
-    #     logging.info("Research incomplete; consider another iteration if needed.")
-
-    # Return the final state (state.final_output should have the JSON)
+    # state.final_output should have the final JSON output
     return state
 
 
@@ -172,48 +163,16 @@ def agent_extract_schema(state: OverallState) -> None:
         schema=state.output_schema,
     )
 
-    # Validate output
     try:
+        # Validate output
         data = json.loads(output)
         state.final_output = data
         logging.info("Final output successfully parsed as JSON.")
+
     except json.JSONDecodeError:
         logging.error("Failed to parse JSON from LLM response.")
         logging.error(f"LLM response was: {output}")
         state.final_output = {}
-
-
-def agent_revise_results(state: OverallState) -> bool:
-    """
-    Step 6: Checks if all required fields are present in state.final_output. If any required fields are missing or empty, logs them and increments revision count. Optionally triggers a revision prompt or additional queries if needed. Returns True if complete, False otherwise.
-    """
-    required_fields = state.output_schema.get("required", [])
-    missing = []
-    for field in required_fields:
-        if field not in state.final_output or not state.final_output[field]:
-            missing.append(field)
-
-    if not missing:
-        logging.info("All required fields are present. Research is complete.")
-        state.complete = True
-        return True
-    else:
-        logging.info(f"Missing or incomplete fields: {missing}")
-        state.complete = False
-        state.revisions += 1
-
-        # Optional revision prompt or logic
-        revision_text = REVISION_PROMPT.format(
-            schema=json.dumps(state.output_schema, indent=2),
-            research=state.research,
-        )
-        revision_output = call_llm(
-            chatgpt_client, [{"role": "user", "content": revision_text}]
-        )
-        logging.info(f"Revision analysis: {revision_output}")
-
-        # If you want an automated loop, you could generate queries for missing data, etc.
-        return False
 
 
 def agent_store_data():
