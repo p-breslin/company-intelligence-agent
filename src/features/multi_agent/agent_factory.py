@@ -98,7 +98,7 @@ def agent_generate_queries(state: OverallState) -> None:
             "content": QUERY_LIST_PROMPT.format(N_searches=cfg.N_searches),
         },
     ]
-    output = call_llm(chatgpt_client, messages)
+    output = call_llm(cfg.OPENAI_API_KEY, messages)
     search_queries = re.findall(r'"\s*(.*?)\s*"', output)  # remove enumeration
     state.search_queries = search_queries
     logging.info(f"Generated search queries: {state.search_queries}")
@@ -137,7 +137,7 @@ async def agent_compile_research(state: OverallState) -> None:
         context=context_str,
     )
     research_notes = call_llm(
-        chatgpt_client, messages=[{"role": "user", "content": instructions}]
+        cfg.OPENAI_API_KEY, messages=[{"role": "user", "content": instructions}]
     )
     state.research.append(research_notes)
     logging.info("Compiled research notes added to state.research.")
@@ -158,7 +158,7 @@ def agent_extract_schema(state: OverallState) -> None:
         research=state.research,
     )
     output = call_llm(
-        chatgpt_client,
+        cfg.OPENAI_API_KEY,
         messages=[{"role": "user", "content": instructions}],
         schema=state.output_schema,
     )
