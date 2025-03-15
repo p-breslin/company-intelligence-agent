@@ -24,7 +24,7 @@ def call_llm(api_key, messages, schema=False):
     """
     Sends a list of messages (role + content) to ChatGPT.
     """
-    client = OpenAI(api_key)
+    client = OpenAI(api_key=api_key)
     try:
         if schema:
             response = client.chat.completions.create(
