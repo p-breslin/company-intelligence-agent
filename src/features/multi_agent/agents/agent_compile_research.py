@@ -5,10 +5,10 @@ from ..config import Configuration
 from ..base_agent import BaseAgent
 from ..events import Event, EventType
 from ..prompts import RESEARCH_PROMPT
-from ..utility import format_tavily_results
+from ..utility import format_results
 
 
-class ResearchCompilationAgent(BaseAgent):
+class ResearchAgent(BaseAgent):
     """
     1.  Listens for either DB_CHECK_DONE (if DB had data) or SEARCH_RESULTS_READY (if we had to do a web search).
     2.  Compiles research notes and publishes RESEARCH_COMPILED.
@@ -26,7 +26,7 @@ class ResearchCompilationAgent(BaseAgent):
         logging.info(f"[{self.name}] Compiling research notes.")
         cfg = Configuration()
 
-        context_str = format_tavily_results(self.state.search_results)
+        context_str = format_results(self.state.search_results)
         instructions = RESEARCH_PROMPT.format(
             company=self.state.company,
             schema=self.state.output_schema,

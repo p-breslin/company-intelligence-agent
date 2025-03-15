@@ -7,7 +7,7 @@ from .state import OverallState
 from .agents.agent_check_database import DatabaseAgent
 from .agents.agent_generate_queries import QueryGenerationAgent
 from .agents.agent_web_search import WebSearchAgent
-from .agents.agent_compile_research import ResearchCompilationAgent
+from .agents.agent_compile_research import ResearchAgent
 from .agents.agent_extract_schema import ExtractionAgent
 
 """
@@ -28,8 +28,8 @@ def create_agents(event_queue: asyncio.Queue, state: OverallState) -> List[BaseA
             name="QueryGenerationAgent", event_queue=event_queue, state=state
         ),
         WebSearchAgent(name="WebSearchAgent", event_queue=event_queue, state=state),
-        ResearchCompilationAgent(
-            name="ResearchCompilationAgent", event_queue=event_queue, state=state
+        ResearchAgent(
+            name="ResearchAgent", event_queue=event_queue, state=state
         ),
         ExtractionAgent(name="ExtractionAgent", event_queue=event_queue, state=state),
     ]

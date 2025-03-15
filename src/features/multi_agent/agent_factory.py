@@ -7,7 +7,7 @@ from openai import OpenAI
 from tavily import AsyncTavilyClient
 from app.main.embedding_search import EmbeddingSearch
 from features.multi_agent.LLM import call_llm
-from features.multi_agent.utility import filter_searches, format_tavily_results
+from features.multi_agent.utility import filter_searches, format_results
 from features.multi_agent.config import Configuration
 from features.multi_agent.state import OverallState
 from features.multi_agent.prompts import (
@@ -129,7 +129,7 @@ async def agent_compile_research(state: OverallState) -> None:
     Step 4: Compiles research notes from the data in state.search_results. The compiled notes are appended to state.research.
     """
     # Format the found results into a context string
-    context_str = format_tavily_results(state.search_results)
+    context_str = format_results(state.search_results)
 
     instructions = RESEARCH_PROMPT.format(
         company=state.company,

@@ -34,9 +34,9 @@ def filter_searches(results: dict | list[dict]) -> list[dict]:
     return unique_sources
 
 
-def format_tavily_results(sources: list[dict], max_tokens: int = 1000) -> str:
+def format_results(sources: list[dict], max_tokens: int = 1000) -> str:
     """
-    Formats a list results from the Tavily API while limiting the context length by max_tokens.
+    Formats a results from Tavily or the local database while limiting the context length by max_tokens.
     """
     formatted_text = "Sources:\n\n"
     for source in sources:
