@@ -5,6 +5,8 @@ from .events import Event, EventType
 from .state import OverallState
 from .factory import create_agents
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+
 
 class Orchestrator:
     """
