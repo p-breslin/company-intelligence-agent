@@ -22,7 +22,6 @@ def create_agents(
     Instantiates and configures all agent classes, injecting the shared
     event queue and shared state.
     """
-    logging.info("Creating agents...")
 
     agents: List[BaseAgent] = [
         DatabaseAgent(name="DatabaseAgent", event_queue=event_queue, state=state),
