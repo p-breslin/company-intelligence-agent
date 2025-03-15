@@ -15,26 +15,20 @@ class ExtractionAgent(BaseAgent):
     3.  Publishes EXTRACTION_COMPLETE.
     """
 
-    def __init__(self, name: str, event_queue, state, completion_queue):
-        super().__init__(name, event_queue, state)
-        self.completion_queue = completion_queue
-
-    async def handle_event(self, event: Event) -> None:
+    async def handle_event(self, event: Event, event_queue) -> None:
         """
         Overrides handle_event from BaseAgent.
         """
         if event.type == EventType.RESEARCH_COMPILED:
-            logging.info(f"[{self.name}] Received {event.type.value} event.")
-            await self.extract_schema()
+            self.log(f"Received {event.type.name} event.")
+            await self.extract_schema(event_queue)
 
-    async def extract_schema(self) -> None:
-        logging.info(f"[{self.name}] Extracting final schema.")
+    async def extract_schema(self, event_queue) -> None:
+        self.log("Extracting notes into JSON schema.")
         cfg = Configuration()
 
         if not self.state.research:
-            logging.warning(
-                f"[{self.name}] No research notes available for extraction."
-            )
+            self.log("No research notes available; cannot extract.")
             return
 
         instructions = EXTRACTION_PROMPT.format(
@@ -50,11 +44,11 @@ class ExtractionAgent(BaseAgent):
             data = json.loads(output)
             self.state.final_output = data
             self.state.complete = True
-            logging.info(f"[{self.name}] Final output successfully parsed as JSON.")
+            self.log("Final output successfully parsed as JSON.")
         except json.JSONDecodeError:
-            logging.error(f"[{self.name}] Failed to parse JSON from LLM response.")
-            logging.error(f"[{self.name}] LLM response was: {output}")
+            self.log("Failed to parse JSON from LLM response.")
+            logging.debug("Failed LLM response as JSON: {output}")
             self.state.final_output = {}
 
-        logging.info(f"[{self.name}] Publishing EXTRACTION_COMPLETE event.")
-        await self.completion_queue.put("EXTRACTION_COMPLETE")
+        self.log("Publishing EXTRACTION_COMPLETE.")
+        await event_queue.put(Event(EventType.EXTRACTION_COMPLETE))

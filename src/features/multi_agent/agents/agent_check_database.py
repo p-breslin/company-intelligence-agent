@@ -1,4 +1,3 @@
-import logging
 from ..base_agent import BaseAgent
 from ..events import Event, EventType
 from app.main.embedding_search import EmbeddingSearch
@@ -12,29 +11,25 @@ class DatabaseAgent(BaseAgent):
         If no data; triggers query generation.
     """
 
-    async def handle_event(self, event: Event) -> None:
+    async def handle_event(self, event: Event, event_queue) -> None:
         """
         Overrides handle_event from BaseAgent.
         """
         if event.type == EventType.START_RESEARCH:
-            logging.info(f"[{self.name}] Received {event.type.value} event.")
-            await self.check_database()
+            self.log(f"Received {event.type.name} event.")
+            await self.check_database(event_queue)
 
-    async def check_database(self) -> None:
-        logging.info(f"[{self.name}] Checking the database...")
+    async def check_database(self, event_queue) -> None:
+        self.log("Checking the database...")
 
         vector_search = EmbeddingSearch(self.state.company)
         metadata, docs = vector_search.run()
 
         if not metadata:
-            logging.info(
-                f"[{self.name}] No stored data found; publishing NEED_QUERIES event."
-            )
-            await self.publish_event(EventType.NEED_QUERIES)
+            self.log("No stored data found; publishing NEED_QUERIES.")
+            await event_queue.put(Event(EventType.NEED_QUERIES))
         else:
-            logging.info(
-                f"[{self.name}] Found data in DB; updating state and publishing DB_CHECK_DONE event."
-            )
+            self.log("Found data in DB; publishing DB_CHECK_DONE.")
             self.state.search_results = [
                 {
                     "url": metadata["link"],
@@ -43,5 +38,4 @@ class DatabaseAgent(BaseAgent):
                     "raw_content": None,
                 }
             ]
-            logging.info(f"[{self.name}] Publishing DB_CHECK_DONE event.")
-            await self.publish_event(EventType.DB_CHECK_DONE)
+            await event_queue.put(Event(EventType.DB_CHECK_DONE))

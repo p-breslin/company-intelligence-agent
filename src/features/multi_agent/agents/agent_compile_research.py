@@ -1,4 +1,3 @@
-import logging
 from features.multi_agent.LLM import call_llm
 
 from ..config import Configuration
@@ -14,16 +13,16 @@ class ResearchAgent(BaseAgent):
     2.  Compiles research notes and publishes RESEARCH_COMPILED.
     """
 
-    async def handle_event(self, event: Event) -> None:
+    async def handle_event(self, event: Event, event_queue) -> None:
         """
         Overrides handle_event from BaseAgent.
         """
         if event.type in [EventType.DB_CHECK_DONE, EventType.SEARCH_RESULTS_READY]:
-            logging.info(f"[{self.name}] Received {event.type.value} event.")
-            await self.compile_research()
+            self.log(f"Received {event.type.name} event.")
+            await self.compile_research(event_queue)
 
-    async def compile_research(self) -> None:
-        logging.info(f"[{self.name}] Compiling research notes.")
+    async def compile_research(self, event_queue) -> None:
+        self.log("Compiling research notes.")
         cfg = Configuration()
 
         context_str = format_results(self.state.search_results)
@@ -37,7 +36,7 @@ class ResearchAgent(BaseAgent):
             cfg.OPENAI_API_KEY, messages=[{"role": "user", "content": instructions}]
         )
         self.state.research.append(research_notes)
-        logging.info(f"[{self.name}] Appended new research notes to state.research.")
+        self.log("Reesearch notes completed.")
 
-        logging.info(f"[{self.name}] Publishing RESEARCH_COMPILED event.")
-        await self.publish_event(EventType.RESEARCH_COMPILED)
+        self.log("Publishing RESEARCH_COMPILED.")
+        await event_queue.put(Event(EventType.RESEARCH_COMPILED))
