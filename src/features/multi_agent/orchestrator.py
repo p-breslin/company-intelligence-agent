@@ -65,7 +65,7 @@ class Orchestrator:
         # The orchestrator will ontinuously consume events from the queue
         while True:
             event = await self.event_queue.get()
-            logging.info(f"[Orchestrator] Received event: {event.type}")
+            logging.info(f"[Orchestrator] Received event: {event.type.name}")
 
             # Shutdown process when extraction is complete
             if event.type == EventType.EXTRACTION_COMPLETE:
@@ -85,7 +85,7 @@ class Orchestrator:
             agent = self.agent_map[event.type]
             await agent.handle_event(event, self.event_queue)
         else:
-            logging.warning(f"No agent mapped to handle event type {event.type}.")
+            logging.warning(f"No agent mapped to handle event type {event.type.name}.")
 
 
 async def run_research_pipeline(company: str):
@@ -98,8 +98,9 @@ async def run_research_pipeline(company: str):
 
 
 if __name__ == "__main__":
-    # For local testing:
-    # python orchestrator.py
-    company_to_research = "Tesla"
+    # local testing
+    company_to_research = "Nvidia"
     result = asyncio.run(run_research_pipeline(company_to_research))
-    print("Final result:", result)
+    print("\n===Final results===")
+    for field in result:
+        print(f"{field}: {result[field]}")
