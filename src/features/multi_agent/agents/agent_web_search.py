@@ -20,7 +20,7 @@ class WebSearchAgent(BaseAgent):
         Overrides handle_event from BaseAgent.
         """
         if event.type == EventType.QUERIES_GENERATED:
-            logging.info(f"[{self.name}] Received QUERIES_GENERATED event.")
+            logging.info(f"[{self.name}] Received {event.type.value} event.")
             await self.web_search()
 
     async def web_search(self) -> None:

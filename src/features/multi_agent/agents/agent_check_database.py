@@ -6,9 +6,10 @@ from app.main.embedding_search import EmbeddingSearch
 
 class DatabaseAgent(BaseAgent):
     """
-    1.  Checks whether relevant data is already stored in a database.
-    2.  If data; stores it in state.search_results and notifies other agents.
-    3.  If no data; triggers query generation.
+    1.  Listens for START_RESEARCH. When triggered:
+    2.  Checks whether relevant data is already stored in a database.
+    3.  If data; stores it in state.search_results and notifies other agents.
+        If no data; triggers query generation.
     """
 
     async def handle_event(self, event: Event) -> None:
@@ -16,7 +17,7 @@ class DatabaseAgent(BaseAgent):
         Overrides handle_event from BaseAgent.
         """
         if event.type == EventType.START_RESEARCH:
-            logging.info(f"[{self.name}] Received START_RESEARCH event.")
+            logging.info(f"[{self.name}] Received {event.type.value} event.")
             await self.check_database()
 
     async def check_database(self) -> None:

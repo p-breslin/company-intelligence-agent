@@ -22,7 +22,7 @@ class QueryGenerationAgent(BaseAgent):
         Overrides handle_event from BaseAgent.
         """
         if event.type == EventType.NEED_QUERIES:
-            logging.info(f"[{self.name}] Received NEED_QUERIES event.")
+            logging.info(f"[{self.name}] Received {event.type.value} event.")
             self.generate_queries()
 
     def generate_queries(self) -> None:
