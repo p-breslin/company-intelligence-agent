@@ -19,8 +19,19 @@ class Orchestrator:
     def __init__(self, company: str):
         self.company = company
         self.state = OverallState(company=company)
+
+        # Agents will use this queue for inter-agent event passing
         self.event_queue = asyncio.Queue()
-        self.agents = create_agents(self.event_queue, self.state)
+
+        # Agents can place a "done" message here for the coordinator
+        self.completion_queue = asyncio.Queue()
+
+        # Pass both queues to the agent factory
+        self.agents = create_agents(
+            event_queue=self.event_queue,
+            completion_queue=self.completion_queue,
+            state=self.state,
+        )
 
     async def start_system(self):
         """
@@ -34,15 +45,12 @@ class Orchestrator:
         # Initiate the pipeline
         await self.event_queue.put(Event(EventType.START_RESEARCH))
 
-        # Monitor for extraction complete
-        while True:
-            event = await self.event_queue.get()
-
-            if event.type == EventType.EXTRACTION_COMPLETE:
-                logging.info("Extraction complete. Shutting down agents...")
-                for _ in self.agents:
-                    await self.event_queue.put(Event(EventType.SHUTDOWN))
-                break
+        # Wait for the final agent to signal completion in the completion_queue
+        done_signal = await self.completion_queue.get()
+        if done_signal == "EXTRACTION_COMPLETE":
+            logging.info("Extraction complete. Shutting down agents...")
+            for _ in self.agents:
+                await self.event_queue.put(Event(EventType.SHUTDOWN))
 
         # Wait for all agents to finish
         await asyncio.gather(*tasks)

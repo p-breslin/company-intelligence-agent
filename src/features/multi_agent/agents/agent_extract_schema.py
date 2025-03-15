@@ -15,6 +15,10 @@ class ExtractionAgent(BaseAgent):
     3.  Publishes EXTRACTION_COMPLETE.
     """
 
+    def __init__(self, name: str, event_queue, state, completion_queue):
+        super().__init__(name, event_queue, state)
+        self.completion_queue = completion_queue
+
     async def handle_event(self, event: Event) -> None:
         """
         Overrides handle_event from BaseAgent.
@@ -53,4 +57,4 @@ class ExtractionAgent(BaseAgent):
             self.state.final_output = {}
 
         logging.info(f"[{self.name}] Publishing EXTRACTION_COMPLETE event.")
-        await self.publish_event(EventType.EXTRACTION_COMPLETE)
+        await self.completion_queue.put("EXTRACTION_COMPLETE")

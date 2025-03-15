@@ -15,7 +15,9 @@ Centralizes creation of agent instances. Each specialized agent is imported and 
 """
 
 
-def create_agents(event_queue: asyncio.Queue, state: OverallState) -> List[BaseAgent]:
+def create_agents(
+    event_queue: asyncio.Queue, completion_queue: asyncio.Queue, state: OverallState
+) -> List[BaseAgent]:
     """
     Instantiates and configures all agent classes, injecting the shared
     event queue and shared state.
@@ -28,9 +30,12 @@ def create_agents(event_queue: asyncio.Queue, state: OverallState) -> List[BaseA
             name="QueryGenerationAgent", event_queue=event_queue, state=state
         ),
         WebSearchAgent(name="WebSearchAgent", event_queue=event_queue, state=state),
-        ResearchAgent(
-            name="ResearchAgent", event_queue=event_queue, state=state
+        ResearchAgent(name="ResearchAgent", event_queue=event_queue, state=state),
+        ExtractionAgent(
+            name="ExtractionAgent",
+            event_queue=event_queue,
+            state=state,
+            completion_queue=completion_queue,
         ),
-        ExtractionAgent(name="ExtractionAgent", event_queue=event_queue, state=state),
     ]
     return agents
