@@ -114,7 +114,7 @@
     ],
 
     "firecrawl": {
-        "extract_prompt": "Extract the URL link, title, published date, three keywords describing the article, and the full, unedited content for the article on this page. Do not include any URL links that may exist in the article content.",
+        "extract_prompt": "Extract the URL link, title, published date, three keywords describing the article, a brief summary, and the full, unedited content for each of the five latest news articles.",
 
         "scrape_prompt": "Extract the URL link, title, published date, tags, and full article content from the page. Do not include any URL links in the content."
 

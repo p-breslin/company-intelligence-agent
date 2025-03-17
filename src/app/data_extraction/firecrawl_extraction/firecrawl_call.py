@@ -1,6 +1,8 @@
 import os
 import time
+import json
 import logging
+from typing import List
 from dotenv import load_dotenv
 from firecrawl import FirecrawlApp
 from utils.config import ConfigLoader
@@ -9,16 +11,14 @@ from utils.helpers import generate_hash
 
 
 class ArticleSchema(BaseModel):
-    # link: str = Field(description="The URL of the article.")
-    # title: str = Field(description="Title of the article")
-    # published: str = Field(description="The published date of the article")
-    # tags: list[str] = Field(description="Three keywords related to the article")
-    # content: str = Field(description="The full article text")
-    link: str
-    title: str
-    published: str
-    keywords: list[str]
-    content: str
+    link: str = Field(..., description="The URL of the article.")
+    title: str = Field(..., description="Title of the article")
+    published: str = Field(..., description="The published date of the article")
+    tags: List[str] = Field(
+        ..., description="Three keywords related to the article", max_length=3
+    )
+    summary: str = Field(..., description="A short summary of the article text")
+    content: str = Field(..., description="The full article text")
 
 
 class ArticleSchemaResponse(BaseModel):
@@ -32,7 +32,7 @@ class FireCrawlScraper:
             load_dotenv()
             self.feeds = feeds
             self.articles = None
-            self.app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API"))
+            self.app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
             logging.info("Firecrawl initialized.")
         except Exception as e:
             logging.error(f"Failed to initialize Firecrawl: {e}")
@@ -50,8 +50,8 @@ class FireCrawlScraper:
         logging.info("Feeds prepared for extraction.")
 
         # Import the Firecrawl prompt
-        config = ConfigLoader("config").get_section("firecrawl")
-        prompt = config["extract_prompt"]
+        cfg = ConfigLoader("config").get_section("firecrawl")
+        prompt = cfg["extract_prompt"]
 
         if batch_job:
             logging.info("Starting batch extraction job...")
@@ -100,7 +100,6 @@ class FireCrawlScraper:
                 return None
 
             logging.info("Extraction job completed.")
-            print(self.articles)
 
             # Won't be a list if just one feed
             if not isinstance(self.articles, list):
@@ -109,3 +108,17 @@ class FireCrawlScraper:
             self.attach_hash()
             logging.info("Hashes attached to extracted articles.")
             return self.articles[0]["articles"]
+
+
+def test():
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    feeds = ["https://www.lightreading.com"]
+    scraper = FireCrawlScraper(feeds)
+    articles = scraper.run()
+    with open("firecrawl_extract.json", "w", encoding="utf-8") as f:
+        json.dump(articles, f, indent=4)
+
+
+test()
